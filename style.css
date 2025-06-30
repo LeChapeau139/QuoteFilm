@@ -188,6 +188,7 @@ body {
 }
 
 .add-form {
+  position: relative;
   margin: 1.5em 0;
   display: flex;
   gap: 1em;
@@ -198,6 +199,16 @@ body {
   box-shadow: 0 2px 12px rgba(0,0,0,0.07);
   padding: 1.2em 1em;
   border: 1px solid var(--color-border);
+}
+
+.input-group {
+  position: relative;
+  width: 100%;
+}
+
+#titleInput {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .add-form input,
@@ -466,4 +477,57 @@ body {
   background: var(--color-accent);
   color: #fff;
   border-color: var(--color-accent);
+}
+
+.autocomplete-list {
+  position: absolute;
+  z-index: 10;
+  background: #fff;
+  color: #111;
+  border: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  max-height: 220px;
+  overflow-y: auto;
+  width: 100%;
+  left: 0;
+  top: 100%;
+  margin-top: -4px;
+  display: none;
+  font-size: 1em;
+}
+
+.dark-theme .autocomplete-list {
+  background: #222;
+  color: #fff;
+  border-color: #444;
+}
+
+.autocomplete-item {
+  padding: 0.7em 1em;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+.autocomplete-item:hover, .autocomplete-item.active {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Divider between choices */
+.autocomplete-item:not(:last-child)::after {
+  content: '';
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: #eee;
+  position: absolute;
+  left: 0;
+  bottom: 0;
 }

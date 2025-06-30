@@ -70,26 +70,35 @@ function addFilm() {
 
       const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
       const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}`;
+      const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}`;
 
-      fetch(fullUrl)
-        .then(res2 => res2.json())
-        .then(details => {
-          const genres = details.genres.map(g => g.name).join(", ");
-          const newFilm = {
-            id: Date.now(),
-            title: result.title || result.name,
-            poster,
-            type,
-            genre: genres.toLowerCase(),
-            rating: currentRating,
-            top: currentRating === 5
-          };
-          films.push(newFilm);
-          localStorage.setItem("films", JSON.stringify(films));
-          currentRating = 0;
-          updateStars();
-          renderGallery();
-        });
+      Promise.all([
+        fetch(fullUrl).then(res2 => res2.json()),
+        fetch(translationsUrl).then(res3 => res3.json())
+      ]).then(([details, translations]) => {
+        const genres = details.genres.map(g => g.name).join(", ");
+        let frenchTitle = result.title || result.name;
+        if (translations && translations.translations) {
+          const fr = translations.translations.find(t => t.iso_639_1 === 'fr');
+          if (fr && fr.data && fr.data.title) {
+            frenchTitle = fr.data.title;
+          }
+        }
+        const newFilm = {
+          id: Date.now(),
+          title: frenchTitle,
+          poster,
+          type,
+          genre: genres.toLowerCase(),
+          rating: currentRating,
+          top: currentRating === 5
+        };
+        films.push(newFilm);
+        localStorage.setItem("films", JSON.stringify(films));
+        currentRating = 0;
+        updateStars();
+        renderGallery();
+      });
     });
 }
 
@@ -180,3 +189,77 @@ renderGallery = function() {
 };
 
 renderGallery();
+
+// === AUTOCOMPLETE ===
+const titleInput = document.getElementById('titleInput');
+const autocompleteList = document.getElementById('autocomplete-list');
+let autocompleteResults = [];
+let autocompleteActive = -1;
+
+if (titleInput && autocompleteList) {
+  titleInput.addEventListener('input', async function() {
+    const query = this.value.trim();
+    // Determine type from active button
+    let type = 'movie';
+    const btnMovie = document.getElementById('btn-movie');
+    if (btnMovie && !btnMovie.classList.contains('active')) type = 'tv';
+    if (query.length < 2) {
+      autocompleteList.style.display = 'none';
+      return;
+    }
+    const url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    autocompleteResults = (data.results || []).slice(0, 8);
+    if (autocompleteResults.length === 0) {
+      autocompleteList.style.display = 'none';
+      return;
+    }
+    autocompleteList.innerHTML = autocompleteResults.map((item, i) =>
+      `<div class="autocomplete-item${i === 0 ? ' active' : ''}" data-index="${i}">${item.title || item.name}</div>`
+    ).join('');
+    autocompleteList.style.display = 'block';
+    autocompleteActive = 0;
+  });
+
+  autocompleteList.addEventListener('mousedown', function(e) {
+    if (e.target.classList.contains('autocomplete-item')) {
+      const idx = +e.target.getAttribute('data-index');
+      if (autocompleteResults[idx]) {
+        titleInput.value = autocompleteResults[idx].title || autocompleteResults[idx].name;
+        autocompleteList.style.display = 'none';
+      }
+    }
+  });
+
+  titleInput.addEventListener('keydown', function(e) {
+    if (!autocompleteResults.length || autocompleteList.style.display === 'none') return;
+    if (e.key === 'ArrowDown') {
+      autocompleteActive = (autocompleteActive + 1) % autocompleteResults.length;
+      updateAutocompleteActive();
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      autocompleteActive = (autocompleteActive - 1 + autocompleteResults.length) % autocompleteResults.length;
+      updateAutocompleteActive();
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (autocompleteActive >= 0 && autocompleteResults[autocompleteActive]) {
+        titleInput.value = autocompleteResults[autocompleteActive].title || autocompleteResults[autocompleteActive].name;
+        autocompleteList.style.display = 'none';
+        e.preventDefault();
+      }
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!autocompleteList.contains(e.target) && e.target !== titleInput) {
+      autocompleteList.style.display = 'none';
+    }
+  });
+
+  function updateAutocompleteActive() {
+    Array.from(autocompleteList.children).forEach((el, i) => {
+      el.classList.toggle('active', i === autocompleteActive);
+    });
+  }
+}
