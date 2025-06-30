@@ -2,34 +2,54 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mes Films & Séries</title>
+  <title>Ma Cinéthèque</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🎬 Ma collection ciné & séries</h1>
-
-  <form id="addForm">
-    <input type="text" id="title" placeholder="Titre" required />
-    <select id="type">
-      <option value="film">Film</option>
-      <option value="serie">Série</option>
-    </select>
-    <input type="text" id="genres" placeholder="Genres (ex: action, SF)" />
-    <input type="date" id="date" />
-    <input type="number" id="note" min="0" max="5" step="0.5" placeholder="Note /5" required />
-    <textarea id="comment" placeholder="Ton avis..."></textarea>
-    <input type="file" id="image" accept="image/*" />
-    <button type="submit">Ajouter</button>
-  </form>
-
-  <input type="text" id="search" placeholder="🔍 Rechercher un film ou une série...">
-
-  <div id="stats"></div>
-  <button onclick="exportData()">📥 Exporter ma collection (JSON)</button>
-
-  <div id="filmList"></div>
-
+  <header class="main-header">
+    <h1 class="site-title">Ma Cinéthèque</h1>
+    <button id="themeToggle" aria-label="Changer le thème">🌓</button>
+  </header>
+  <div class="main-content">
+    <aside class="sidebar">
+      <div class="avatar-container">
+        <img src="avatar.jpg" alt="Avatar" class="avatar-img" />
+        <p class="about-me"><em>Regarder le plus de film et de série pour améliorer ma culture cinématographique, les films vont évoluer et moi aussi.</em></p>
+      </div>
+      <div class="add-form" id="addForm">
+        <input type="text" id="titleInput" placeholder="Titre du film ou série" />
+        <select id="typeInput">
+          <option value="movie">Film</option>
+          <option value="tv">Série</option>
+        </select>
+        <div class="rating">
+          Note :
+          <span class="star" data-value="1">☆</span>
+          <span class="star" data-value="2">☆</span>
+          <span class="star" data-value="3">☆</span>
+          <span class="star" data-value="4">☆</span>
+          <span class="star" data-value="5">☆</span>
+        </div>
+        <button onclick="addFilm()">Ajouter</button>
+      </div>
+    </aside>
+    <section class="content-area">
+      <div class="top-films">
+        <h2 class="top-title">★ ★ ★ ★ ★</h2>
+        <div class="carousel-container">
+          <button class="carousel-arrow left" onclick="scrollTopList(-1)">&#8592;</button>
+          <div class="top-list" id="topList"></div>
+          <button class="carousel-arrow right" onclick="scrollTopList(1)">&#8594;</button>
+        </div>
+      </div>
+      <div class="gallery-filters">
+        <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
+        <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
+        <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>

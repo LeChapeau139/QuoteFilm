@@ -1,167 +1,182 @@
-const TMDB_API_KEY = "TA_CLÉ_API"; // 🔁 remplace ici par ta vraie clé API
-const form = document.getElementById("addForm");
-const filmList = document.getElementById("filmList");
-const searchInput = document.getElementById("search");
-const titleInput = document.getElementById("title");
-const statsDiv = document.getElementById("stats");
+const API_KEY = "fd846ff36eb8355715e4264b7eb28912";
+let films = JSON.parse(localStorage.getItem("films") || "[]");
+let currentRating = 0;
+let galleryFilter = 'all';
+let carouselInterval;
 
-let autoFetchedImage = null;
+// === THEME SWITCHING ===
+const themeToggle = document.getElementById('themeToggle');
+const body = document.body;
 
-// 🔍 Recherche d’affiche automatique
-titleInput.addEventListener("blur", async () => {
-  const title = titleInput.value.trim();
-  const type = document.getElementById("type").value;
-
-  if (title === "") return;
-
-  const url = `https://api.themoviedb.org/3/search/${type === "serie" ? "tv" : "movie"}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data.results && data.results[0] && data.results[0].poster_path) {
-      autoFetchedImage = `https://image.tmdb.org/t/p/w500${data.results[0].poster_path}`;
-      console.log("Affiche trouvée via TMDb !");
-    } else {
-      autoFetchedImage = null;
-    }
-  } catch (error) {
-    console.error("Erreur TMDb :", error);
-    autoFetchedImage = null;
-  }
-});
-
-function getFilms() {
-  return JSON.parse(localStorage.getItem("films")) || [];
-}
-
-function saveFilms(films) {
-  localStorage.setItem("films", JSON.stringify(films));
-}
-
-function renderStars(note) {
-  let stars = "";
-  for (let i = 1; i <= 5; i++) {
-    stars += i <= note ? "★" : "☆";
-  }
-  return stars;
-}
-
-function renderFilms(filter = "") {
-  filmList.innerHTML = "";
-  let films = getFilms();
-  films = films.sort((a, b) => b.timestamp - a.timestamp);
-
-  if (filter) {
-    films = films.filter(
-      (f) =>
-        f.title.toLowerCase().includes(filter.toLowerCase()) ||
-        f.genres.toLowerCase().includes(filter.toLowerCase())
-    );
-  }
-
-  films.forEach((film, index) => {
-    const div = document.createElement("div");
-    div.className = "film";
-    div.innerHTML = `
-      <button class="delete-btn" onclick="deleteFilm(${index})">×</button>
-      <h3>${film.title}</h3>
-      <p><strong>${film.type === "serie" ? "Série" : "Film"}</strong> • ${film.date || "Date inconnue"}</p>
-      <p class="stars">${renderStars(film.note)}</p>
-      <p>${film.comment}</p>
-      <p><em>${film.genres}</em></p>
-      ${film.image ? `<img src="${film.image}" alt="Affiche">` : ""}
-    `;
-    filmList.appendChild(div);
-  });
-
-  renderStats();
-}
-
-form.addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const title = document.getElementById("title").value;
-  const type = document.getElementById("type").value;
-  const genres = document.getElementById("genres").value;
-  const date = document.getElementById("date").value;
-  const note = parseFloat(document.getElementById("note").value);
-  const comment = document.getElementById("comment").value;
-  const imageInput = document.getElementById("image");
-  const file = imageInput.files[0];
-
-  if (file) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      addFilm(title, type, genres, date, note, comment, reader.result);
-    };
-    reader.readAsDataURL(file);
+function setTheme(theme) {
+  if (theme === 'dark') {
+    body.classList.add('dark-theme');
+    body.classList.remove('light-theme');
+    themeToggle.textContent = '🌙';
   } else {
-    addFilm(title, type, genres, date, note, comment, autoFetchedImage);
+    body.classList.remove('dark-theme');
+    body.classList.add('light-theme');
+    themeToggle.textContent = '☀️';
+  }
+  localStorage.setItem('theme', theme);
+}
+
+function getPreferredTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) return saved;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function toggleTheme() {
+  const current = body.classList.contains('dark-theme') ? 'dark' : 'light';
+  setTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', toggleTheme);
+  setTheme(getPreferredTheme());
+}
+
+function showAddForm() {
+  document.getElementById("addForm").style.display = "flex";
+}
+
+// Gestion des étoiles
+document.querySelectorAll(".star").forEach(star => {
+  star.addEventListener("click", () => {
+    currentRating = parseInt(star.getAttribute("data-value"));
+    updateStars();
+  });
+});
+
+function updateStars() {
+  document.querySelectorAll(".star").forEach(star => {
+    const value = parseInt(star.getAttribute("data-value"));
+    star.classList.toggle("selected", value <= currentRating);
+  });
+}
+
+function addFilm() {
+  const title = document.getElementById("titleInput").value;
+  const type = document.getElementById("typeInput").value;
+
+  if (!title || currentRating === 0) return alert("Titre et note requis");
+
+  fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
+    .then(res => res.json())
+    .then(data => {
+      const result = data.results[0];
+      if (!result) return alert("Aucun résultat");
+
+      const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
+      const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}`;
+
+      fetch(fullUrl)
+        .then(res2 => res2.json())
+        .then(details => {
+          const genres = details.genres.map(g => g.name).join(", ");
+          const newFilm = {
+            id: Date.now(),
+            title: result.title || result.name,
+            poster,
+            type,
+            genre: genres.toLowerCase(),
+            rating: currentRating,
+            top: currentRating === 5
+          };
+          films.push(newFilm);
+          localStorage.setItem("films", JSON.stringify(films));
+          currentRating = 0;
+          updateStars();
+          renderGallery();
+        });
+    });
+}
+
+function setGalleryFilter(filter, btn) {
+  galleryFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderGallery();
+}
+
+function renderGallery() {
+  const gallery = document.getElementById("gallery");
+  const topList = document.getElementById("topList");
+
+  gallery.innerHTML = "";
+  topList.innerHTML = "";
+
+  // Always show all 5-star films/series in topList
+  films.filter(film => film.rating === 5).forEach(film => {
+    const topImg = document.createElement("img");
+    topImg.src = film.poster;
+    topImg.alt = film.title;
+    topList.appendChild(topImg);
+  });
+
+  films.forEach(film => {
+    if (galleryFilter !== 'all' && film.type !== galleryFilter) return;
+    const item = document.createElement("div");
+    item.className = "gallery-item";
+    item.innerHTML = `
+      <button class="delete-film-btn" title="Supprimer" onclick="deleteFilm(${film.id})">×</button>
+      <img src="${film.poster}" alt="${film.title}" />
+      <div><strong>${film.title}</strong></div>
+      <div>${film.genre}</div>
+      <div class="stars">${"★".repeat(film.rating)}${"☆".repeat(5 - film.rating)}</div>
+    `;
+    gallery.appendChild(item);
+  });
+
+  startCarouselAutoScroll();
+}
+
+function deleteFilm(id) {
+  films = films.filter(film => film.id !== id);
+  localStorage.setItem("films", JSON.stringify(films));
+  renderGallery();
+}
+
+function scrollTopList(direction) {
+  const topList = document.getElementById('topList');
+  const scrollAmount = 180 + 16; // image width + gap
+  topList.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+}
+
+function startCarouselAutoScroll() {
+  stopCarouselAutoScroll();
+  const topList = document.getElementById('topList');
+  if (!topList) return;
+  carouselInterval = setInterval(() => {
+    const scrollAmount = topList.querySelector('img') ? topList.querySelector('img').offsetWidth + 16 : 166;
+    if (topList.scrollLeft + topList.offsetWidth >= topList.scrollWidth - 1) {
+      // Loop back to start
+      topList.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      topList.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  }, 2500);
+}
+
+function stopCarouselAutoScroll() {
+  if (carouselInterval) clearInterval(carouselInterval);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const topList = document.getElementById('topList');
+  if (topList) {
+    topList.addEventListener('mouseenter', stopCarouselAutoScroll);
+    topList.addEventListener('mouseleave', startCarouselAutoScroll);
+    startCarouselAutoScroll();
   }
 });
 
-function addFilm(title, type, genres, date, note, comment, image) {
-  const films = getFilms();
-  films.push({
-    title,
-    type,
-    genres,
-    date,
-    note,
-    comment,
-    image,
-    timestamp: Date.now(),
-  });
-  saveFilms(films);
-  renderFilms();
-  form.reset();
-  autoFetchedImage = null;
-}
+// Also restart auto-scroll after renderGallery
+const originalRenderGallery = renderGallery;
+renderGallery = function() {
+  originalRenderGallery.apply(this, arguments);
+  startCarouselAutoScroll();
+};
 
-function deleteFilm(index) {
-  const films = getFilms();
-  films.splice(index, 1);
-  saveFilms(films);
-  renderFilms(searchInput.value);
-}
-
-function renderStats() {
-  const films = getFilms();
-  const total = films.length;
-  const moyenne =
-    total > 0
-      ? (
-          films.reduce((sum, f) => sum + parseFloat(f.note), 0) / total
-        ).toFixed(2)
-      : 0;
-
-  const filmsCount = films.filter((f) => f.type === "film").length;
-  const seriesCount = total - filmsCount;
-
-  statsDiv.innerHTML = `
-    <strong>Total :</strong> ${total} éléments |
-    🎬 Films : ${filmsCount} |
-    📺 Séries : ${seriesCount} |
-    ⭐ Note moyenne : ${moyenne}/5
-  `;
-}
-
-function exportData() {
-  const films = getFilms();
-  const blob = new Blob([JSON.stringify(films, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ma_collection.json";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-searchInput.addEventListener("input", () => {
-  renderFilms(searchInput.value);
-});
-
-renderFilms();
+renderGallery();
