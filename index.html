@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mes Films & Séries</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>🎬 Ma collection ciné & séries</h1>
+
+  <form id="addForm">
+    <input type="text" id="title" placeholder="Titre" required />
+    <select id="type">
+      <option value="film">Film</option>
+      <option value="serie">Série</option>
+    </select>
+    <input type="text" id="genres" placeholder="Genres (ex: action, SF)" />
+    <input type="date" id="date" />
+    <input type="number" id="note" min="0" max="5" step="0.5" placeholder="Note /5" required />
+    <textarea id="comment" placeholder="Ton avis..."></textarea>
+    <input type="file" id="image" accept="image/*" />
+    <button type="submit">Ajouter</button>
+  </form>
+
+  <input type="text" id="search" placeholder="🔍 Rechercher un film ou une série...">
+
+  <div id="stats"></div>
+  <button onclick="exportData()">📥 Exporter ma collection (JSON)</button>
+
+  <div id="filmList"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
