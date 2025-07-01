@@ -511,6 +511,7 @@ function showProfileSidebar(profile) {
 
 // Charge et affiche le carousel des autres utilisateurs
 async function loadUserCarousel(currentUserId) {
+  // Récupère tous les profils sauf le tien
   const { data: users, error } = await supabase
     .from('profiles')
     .select('id, pseudo, avatar')
@@ -522,10 +523,26 @@ async function loadUserCarousel(currentUserId) {
     carousel.innerHTML = '<div style="text-align:center;color:#888;">Aucun autre utilisateur</div>';
     return;
   }
+  // Pour chaque utilisateur, récupère le nombre de films notés
+  const userIds = users.map(u => u.id);
+  let filmCounts = {};
+  if (userIds.length > 0) {
+    const { data: filmsData } = await supabase
+      .from('films')
+      .select('user_id');
+    if (filmsData) {
+      filmsData.forEach(row => {
+        if (userIds.includes(row.user_id)) {
+          filmCounts[row.user_id] = (filmCounts[row.user_id] || 0) + 1;
+        }
+      });
+    }
+  }
   carousel.innerHTML = users.map(user => `
     <div class="user-carousel-profile" data-userid="${user.id}">
       <img src="images/avatars/${user.avatar}" class="user-carousel-avatar" alt="Avatar de ${user.pseudo}" />
       <span class="user-carousel-pseudo">${user.pseudo}</span>
+      <span class="user-carousel-count">${filmCounts[user.id] || 0} film${(filmCounts[user.id]||0) > 1 ? 's' : ''}</span>
     </div>
   `).join('');
   // Ajoute le gestionnaire de clic pour chaque profil

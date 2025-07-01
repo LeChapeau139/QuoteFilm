@@ -751,46 +751,68 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.07);
   border: 1px solid var(--color-border);
-  padding: 2em 1em 1em 1em;
-  width: 88%;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5em 1em;
+  padding: 2em 0.5em 1em 0.5em;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
   min-height: 180px;
   max-height: 400px;
   overflow-y: auto;
-  justify-items: center;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .user-carousel-profile {
   background: none;
   border: none;
   box-shadow: none;
-  width: auto;
+  width: 100%;
   min-width: 0;
-  height: auto;
-  padding: 0;
+  height: 64px;
+  padding: 0.3em 1em;
   margin: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s;
   cursor: pointer;
+  box-sizing: border-box;
+}
+.user-carousel-profile:hover {
+  background: var(--color-accent);
 }
 .user-carousel-avatar {
-  width: 90px;
-  height: 90px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--color-accent);
-  margin-bottom: 0.7em;
+  border: 2px solid #fff;
+  margin-right: 1em;
   background: #fff;
+  flex-shrink: 0;
 }
 .user-carousel-pseudo {
+  color: var(--color-accent);
   font-weight: bold;
   font-size: 1.1em;
+  transition: color 0.2s;
+  margin-right: 0.7em;
+}
+.user-carousel-count {
+  font-size: 1em;
+  font-weight: 500;
   color: var(--color-accent);
-  text-align: center;
-  margin-top: 0.2em;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+.user-carousel-profile:hover .user-carousel-pseudo,
+.user-carousel-profile:hover .user-carousel-count {
+  color: #fff;
+}
+.user-carousel::-webkit-scrollbar {
+  display: none;
 }
 
 .avatar-more {
