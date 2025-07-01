@@ -28,7 +28,7 @@ body {
 .main-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   background: var(--color-header);
   padding: 1.5em 1em 1em 1em;
   border-radius: 12px;
@@ -574,4 +574,292 @@ body {
   position: absolute;
   left: 0;
   bottom: 0;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+.login-card {
+  background: var(--color-card);
+  border-radius: 18px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  padding: 2.5em 2em 2em 2em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 320px;
+  max-width: 95vw;
+  border: 1px solid var(--color-border);
+}
+
+.login-logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  margin-bottom: 0.7em;
+}
+
+.login-title {
+  font-size: 2em;
+  font-weight: 900;
+  color: var(--color-accent);
+  margin: 0 0 0.2em 0;
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0 0 1.2em 0;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.7em 1em;
+  margin-bottom: 1em;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 1em;
+  transition: border 0.2s;
+  box-sizing: border-box;
+}
+.login-input:focus {
+  outline: none;
+  border: 2px solid var(--color-accent);
+}
+
+.login-btns {
+  display: flex;
+  gap: 1em;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 0.5em;
+}
+
+.login-btn {
+  padding: 0.7em 1.5em;
+  border-radius: 999px;
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.login-btn-secondary {
+  background: var(--color-bg);
+  color: var(--color-accent);
+}
+.login-btn:hover, .login-btn-secondary:hover {
+  background: #b00610;
+  color: #fff;
+  border-color: #b00610;
+}
+
+.login-error {
+  color: #e50914;
+  margin-top: 0.7em;
+  min-height: 1.2em;
+  text-align: center;
+  font-weight: 600;
+}
+
+#logoutBtn {
+  padding: 0.7em 1.5em;
+  border-radius: 999px;
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  margin-left: 1em;
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+}
+#logoutBtn:hover {
+  background: #b00610;
+  color: #fff;
+  border-color: #b00610;
+}
+
+.avatar-select {
+  width: 100%;
+  margin-bottom: 1em;
+  text-align: center;
+}
+.avatar-options {
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.avatar-option {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: border 0.2s, transform 0.2s;
+  background: #fff;
+  object-fit: cover;
+}
+.avatar-option.selected,
+.avatar-option:focus {
+  border: 3px solid var(--color-accent);
+  outline: none;
+  transform: scale(1.08);
+}
+.pseudo-group {
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.profile-pseudo {
+  display: block;
+  font-size: 2em;
+  font-weight: 900;
+  color: var(--color-accent);
+  text-align: center;
+  margin: 0.2em 0 0.5em 0;
+  letter-spacing: 1px;
+}
+
+.user-carousel {
+  margin-top: 2em;
+  max-height: 340px;
+  min-height: 120px;
+  overflow-y: auto;
+  background: var(--color-card);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  border: 1px solid var(--color-border);
+  padding: 1em 0.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+.user-carousel-profile {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  cursor: pointer;
+  padding: 0.4em 0.7em;
+  border-radius: 8px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.user-carousel-profile:hover {
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(229,9,20,0.10);
+}
+.user-carousel-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-accent);
+  background: #fff;
+}
+.user-carousel-pseudo {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: var(--color-accent);
+  transition: color 0.2s;
+}
+.user-carousel-profile:hover .user-carousel-pseudo {
+  color: #fff;
+}
+
+.avatar-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2em;
+  background: #eee;
+  color: var(--color-accent);
+  border: 3px solid transparent;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border 0.2s, background 0.2s, color 0.2s;
+}
+.avatar-more:hover, .avatar-more:focus {
+  border: 3px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.avatar-modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-modal-content {
+  background: var(--color-card);
+  border-radius: 18px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  padding: 2em 2em 1.5em 2em;
+  min-width: 420px;
+  max-width: 700px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.avatar-modal-close {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+  font-size: 2em;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: bold;
+  transition: color 0.2s;
+}
+.avatar-modal-close:hover {
+  color: #b00610;
+}
+.avatar-modal-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2em;
+  margin-top: 1em;
+  justify-items: center;
+}
+.avatar-modal-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  object-fit: cover;
+  background: #fff;
+  cursor: pointer;
+  transition: border 0.2s, transform 0.2s;
+}
+.avatar-modal-avatar.selected,
+.avatar-modal-avatar:focus {
+  border: 3px solid var(--color-accent);
+  outline: none;
+  transform: scale(1.08);
 }

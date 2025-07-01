@@ -144,7 +144,7 @@ function renderGallery() {
     const item = document.createElement("div");
     item.className = "gallery-item";
     item.innerHTML = `
-      <button class="delete-film-btn" title="Supprimer" onclick="deleteFilm(${film.id})">×</button>
+      <button class="delete-film-btn" title="Supprimer" onclick="deleteFilm('${film.id}')">×</button>
       <img src="${film.poster}" alt="${film.title}" />
       <div><strong>${film.title}</strong></div>
       <div>${film.genre}</div>
@@ -187,6 +187,138 @@ document.addEventListener('DOMContentLoaded', () => {
     topList.addEventListener('mouseenter', stopCarouselAutoScroll);
     topList.addEventListener('mouseleave', startCarouselAutoScroll);
     startCarouselAutoScroll();
+  }
+
+  // Switch entre connexion et inscription
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
+  const showSignupBtn = document.getElementById('show-signup');
+  const showLoginBtn = document.getElementById('show-login');
+  if (showSignupBtn) showSignupBtn.addEventListener('click', () => {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+  });
+  if (showLoginBtn) showLoginBtn.addEventListener('click', () => {
+    signupForm.style.display = 'none';
+    loginForm.style.display = 'block';
+  });
+
+  // Gestion du submit connexion
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await login();
+    });
+  }
+  // Gestion du submit inscription
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await signup();
+    });
+  }
+
+  // Sélection d'avatar à l'inscription
+  const avatarOptions = document.querySelectorAll('.avatar-option');
+  const selectedAvatarInput = document.getElementById('selected-avatar');
+  if (avatarOptions.length && selectedAvatarInput) {
+    avatarOptions.forEach(img => {
+      img.addEventListener('click', () => {
+        avatarOptions.forEach(i => i.classList.remove('selected'));
+        img.classList.add('selected');
+        if (img.dataset.avatar) {
+          selectedAvatarInput.value = img.getAttribute('data-avatar');
+          // Si on clique sur un avatar rapide, on remet les 3 points si ce n'est pas l'avatar personnalisé
+          const avatarMoreDiv = document.getElementById('avatar-more');
+          if (avatarMoreDiv && img !== avatarMoreDiv) {
+            avatarMoreDiv.innerHTML = '&#8230;';
+            avatarMoreDiv.classList.remove('avatar-more-img');
+            avatarMoreDiv.removeAttribute('data-avatar');
+          }
+        }
+      });
+      img.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          img.click();
+        }
+      });
+    });
+    // Sélectionne le premier par défaut
+    avatarOptions[0].classList.add('selected');
+  }
+
+  // --- Gestion de la popup d'avatars ---
+  const allAvatars = [
+    'batman.svg',
+    'c-3po.svg',
+    'dark-vador.svg',
+    'marge-simpson.svg',
+    'rick-sanchez.svg',
+    'schtroumpf.svg',
+    'scooby-doo.svg',
+    'shrek.svg',
+    'sonic.svg',
+    'spider-man.svg',
+    'stitch.svg',
+    'thor.svg',
+    'totoro.svg'
+  ];
+  const avatarMore = document.getElementById('avatar-more');
+  const avatarModal = document.getElementById('avatar-modal');
+  const avatarModalList = document.getElementById('avatar-modal-list');
+  const avatarModalClose = document.getElementById('avatar-modal-close');
+
+  if (avatarMore && avatarModal && avatarModalList) {
+    function setAvatarMoreAs(imgSrc, avatarFile) {
+      avatarMore.innerHTML = `<img src="images/avatars/${avatarFile}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" alt="Avatar choisi" />`;
+      avatarMore.classList.add('avatar-more-img');
+      avatarMore.setAttribute('data-avatar', avatarFile);
+    }
+    avatarMore.addEventListener('click', () => {
+      avatarModalList.innerHTML = allAvatars.map(file =>
+        `<img src="images/avatars/${file}" class="avatar-modal-avatar" data-avatar="${file}" tabindex="0" alt="Avatar" />`
+      ).join('');
+      avatarModal.style.display = 'flex';
+      // Sélection visuelle de l'avatar courant
+      const current = selectedAvatarInput.value;
+      avatarModalList.querySelectorAll('.avatar-modal-avatar').forEach(img => {
+        if (img.getAttribute('data-avatar') === current) {
+          img.classList.add('selected');
+        }
+        img.addEventListener('click', () => {
+          // Met à jour la sélection dans le formulaire principal
+          selectedAvatarInput.value = img.getAttribute('data-avatar');
+          // Met à jour la sélection rapide
+          document.querySelectorAll('.avatar-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          setAvatarMoreAs(img.src, img.getAttribute('data-avatar'));
+          avatarMore.classList.add('selected');
+          avatarModal.style.display = 'none';
+        });
+        img.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            img.click();
+          }
+        });
+      });
+    });
+    // Permet de re-ouvrir la popup si on clique sur l'avatar personnalisé
+    avatarMore.addEventListener('click', () => {
+      if (avatarMore.classList.contains('avatar-more-img')) {
+        avatarModal.style.display = 'flex';
+      }
+    });
+    // Fermer la popup
+    if (avatarModalClose) {
+      avatarModalClose.addEventListener('click', () => {
+        avatarModal.style.display = 'none';
+      });
+    }
+    // Fermer la popup si on clique en dehors
+    avatarModal.addEventListener('click', (e) => {
+      if (e.target === avatarModal) avatarModal.style.display = 'none';
+    });
   }
 });
 
@@ -275,23 +407,56 @@ if (titleInput && autocompleteList) {
 
 // === SUPABASE AUTH ===
 async function login() {
-  const email = document.getElementById('login-email').value;
+  const identifier = document.getElementById('login-identifier').value.trim();
   const password = document.getElementById('login-password').value;
+  let email = identifier;
+  // Si ce n'est pas un email, on cherche l'email associé au pseudo dans profiles
+  if (!identifier.includes('@')) {
+    let { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .ilike('pseudo', identifier)
+      .limit(1);
+    if (error || !profiles || profiles.length === 0) {
+      document.getElementById('login-error').textContent = "Pseudo inconnu.";
+      return;
+    }
+    email = profiles[0].email;
+  }
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     document.getElementById('login-error').textContent = error.message;
   } else {
+    document.getElementById('login-error').textContent = '';
     showMainApp();
   }
 }
 
 async function signup() {
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
+  const pseudo = document.getElementById('signup-pseudo').value;
+  const avatar = document.getElementById('selected-avatar').value;
+  if (!pseudo) {
+    document.getElementById('signup-error').textContent = "Le pseudo est requis.";
+    return;
+  }
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) {
-    document.getElementById('login-error').textContent = error.message;
+    document.getElementById('signup-error').textContent = error.message;
   } else {
+    // Ajoute l'avatar, le pseudo et l'email dans la table profiles
+    const user = data.user;
+    if (user) {
+      let { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{ id: user.id, pseudo, avatar, email }]);
+      if (profileError) {
+        document.getElementById('signup-error').textContent = profileError.message;
+        return;
+      }
+    }
+    document.getElementById('signup-error').textContent = '';
     showMainApp();
   }
 }
@@ -308,6 +473,20 @@ async function showMainApp() {
     document.getElementById('main-app').style.display = 'block';
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    // Ajout : charge le profil utilisateur et affiche l'avatar et le pseudo
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('pseudo, avatar')
+      .eq('id', user.id)
+      .single();
+    if (!error && profile) {
+      const avatarImg = document.querySelector('.avatar-img');
+      if (avatarImg) avatarImg.src = `images/avatars/${profile.avatar}`;
+      const aboutMe = document.querySelector('.about-me');
+      if (aboutMe) aboutMe.innerHTML = `<span class="profile-pseudo">${profile.pseudo}</span>`;
+    }
+    // Ajout : charge et affiche le carousel des autres utilisateurs
+    loadUserCarousel(user.id);
     fetchFilms();
   } else {
     document.getElementById('login-page').style.display = 'flex';
@@ -317,4 +496,46 @@ async function showMainApp() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', showMainApp);
+// Charge et affiche le carousel des autres utilisateurs
+async function loadUserCarousel(currentUserId) {
+  const { data: users, error } = await supabase
+    .from('profiles')
+    .select('id, pseudo, avatar')
+    .neq('id', currentUserId)
+    .order('pseudo', { ascending: true });
+  const carousel = document.getElementById('user-carousel');
+  if (!carousel) return;
+  if (error || !users || users.length === 0) {
+    carousel.innerHTML = '<div style="text-align:center;color:#888;">Aucun autre utilisateur</div>';
+    return;
+  }
+  carousel.innerHTML = users.map(user => `
+    <div class="user-carousel-profile" data-userid="${user.id}">
+      <img src="images/avatars/${user.avatar}" class="user-carousel-avatar" alt="Avatar de ${user.pseudo}" />
+      <span class="user-carousel-pseudo">${user.pseudo}</span>
+    </div>
+  `).join('');
+  // Ajoute le gestionnaire de clic pour chaque profil
+  carousel.querySelectorAll('.user-carousel-profile').forEach(el => {
+    el.addEventListener('click', () => {
+      showUserFilms(el.getAttribute('data-userid'));
+    });
+  });
+}
+
+// Affiche les films/séries d'un autre utilisateur dans la galerie
+async function showUserFilms(userId) {
+  let { data, error } = await supabase
+    .from('films')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) return alert(error.message);
+  films = data || [];
+  renderGallery();
+}
+
+// Ajout : écoute les changements d'état d'authentification
+supabase.auth.onAuthStateChange((event, session) => {
+  showMainApp();
+});

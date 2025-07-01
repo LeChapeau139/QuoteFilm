@@ -7,15 +7,53 @@
   <link rel="icon" type="image/png" href="images/quotefilm-icon-white.png" />
 </head>
 <body>
-  <div id="login-page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
-    <h2>Connexion</h2>
-    <input type="email" id="login-email" placeholder="Email" style="margin-bottom: 1em; padding: 0.5em; width: 220px;" />
-    <input type="password" id="login-password" placeholder="Mot de passe" style="margin-bottom: 1em; padding: 0.5em; width: 220px;" />
-    <div style="display: flex; gap: 1em;">
-      <button onclick="login()" style="padding: 0.5em 1.5em;">Se connecter</button>
-      <button onclick="signup()" style="padding: 0.5em 1.5em;">Créer un compte</button>
+  <div id="login-page" class="login-page">
+    <div class="login-card">
+      <img src="images/quotefilm-icon-white.png" alt="Logo" class="login-logo" />
+      <h1 class="login-title">Ma Cinéthèque</h1>
+      <h2 class="login-subtitle">Connexion</h2>
+      <!-- Formulaire de connexion -->
+      <form id="login-form">
+        <input type="text" id="login-identifier" placeholder="Pseudo ou Email" class="login-input" autocomplete="username" required />
+        <input type="password" id="login-password" placeholder="Mot de passe" class="login-input" autocomplete="current-password" required />
+        <div class="login-btns">
+          <button type="submit" class="login-btn">Se connecter</button>
+          <button type="button" id="show-signup" class="login-btn login-btn-secondary">Créer un compte</button>
+        </div>
+        <div id="login-error" class="login-error"></div>
+      </form>
+      <!-- Formulaire d'inscription (masqué par défaut) -->
+      <form id="signup-form" style="display:none;">
+        <div class="avatar-select">
+          <label>Choisis ton avatar :</label>
+          <div class="avatar-options">
+            <img src="images/avatars/marge-simpson.svg" class="avatar-option" data-avatar="marge-simpson.svg" tabindex="0" />
+            <img src="images/avatars/rick-et-morty.svg" class="avatar-option" data-avatar="rick-et-morty.svg" tabindex="0" />
+            <img src="images/avatars/stitch.svg" class="avatar-option" data-avatar="stitch.svg" tabindex="0" />
+            <div class="avatar-option avatar-more" id="avatar-more" tabindex="0">&#8230;</div>
+          </div>
+          <input type="hidden" id="selected-avatar" value="marge-simpson.svg" />
+        </div>
+        <!-- Popup pour tous les avatars -->
+        <div id="avatar-modal" class="avatar-modal" style="display:none;">
+          <div class="avatar-modal-content">
+            <span class="avatar-modal-close" id="avatar-modal-close">&times;</span>
+            <h3>Choisis ton avatar</h3>
+            <div class="avatar-modal-list" id="avatar-modal-list"></div>
+          </div>
+        </div>
+        <div class="pseudo-group">
+          <input type="text" id="signup-pseudo" placeholder="Pseudo" class="login-input" autocomplete="nickname" required />
+        </div>
+        <input type="email" id="signup-email" placeholder="Email" class="login-input" autocomplete="email" required />
+        <input type="password" id="signup-password" placeholder="Mot de passe" class="login-input" autocomplete="new-password" required />
+        <div class="login-btns">
+          <button type="submit" class="login-btn">Créer un compte</button>
+          <button type="button" id="show-login" class="login-btn login-btn-secondary">Déjà un compte ?</button>
+        </div>
+        <div id="signup-error" class="login-error"></div>
+      </form>
     </div>
-    <div id="login-error" style="color: red; margin-top: 1em;"></div>
   </div>
   <div id="main-app" style="display: none;">
     <header class="main-header">
@@ -28,7 +66,7 @@
       <aside class="sidebar">
         <div class="avatar-container">
           <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
-          <p class="about-me"><em>Regarder le plus de film et de série pour améliorer ma culture cinématographique, les films vont évoluer et moi aussi.</em></p>
+          <p class="about-me"></p>
         </div>
         <div class="add-form" id="addForm">
           <input type="text" id="titleInput" placeholder="Titre du film ou série" />
@@ -47,6 +85,7 @@
           </div>
           <button onclick="addFilm()">Ajouter</button>
         </div>
+        <div id="user-carousel" class="user-carousel"></div>
       </aside>
       <section class="content-area">
         <div class="top-films">
