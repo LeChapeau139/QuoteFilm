@@ -1,8 +1,10 @@
 const API_KEY = "fd846ff36eb8355715e4264b7eb28912";
-let films = JSON.parse(localStorage.getItem("films") || "[]");
+let films = [];
 let currentRating = 0;
 let galleryFilter = 'all';
 let carouselInterval;
+let currentProfileId = null;
+let myProfile = null;
 
 // === THEME SWITCHING ===
 const themeToggle = document.getElementById('themeToggle');
@@ -473,19 +475,23 @@ async function showMainApp() {
     document.getElementById('main-app').style.display = 'block';
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.style.display = 'inline-block';
-    // Ajout : charge le profil utilisateur et affiche l'avatar et le pseudo
+    // Charge le profil utilisateur connecté et affiche l'avatar et le pseudo
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('pseudo, avatar')
+      .select('pseudo, avatar, id')
       .eq('id', user.id)
       .single();
     if (!error && profile) {
-      const avatarImg = document.querySelector('.avatar-img');
-      if (avatarImg) avatarImg.src = `images/avatars/${profile.avatar}`;
-      const aboutMe = document.querySelector('.about-me');
-      if (aboutMe) aboutMe.innerHTML = `<span class="profile-pseudo">${profile.pseudo}</span>`;
+      myProfile = profile;
+      showProfileSidebar(profile);
+      // Met à jour l'avatar du bouton HOME
+      const homeBtnAvatar = document.getElementById('homeBtnAvatar');
+      if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${profile.avatar}`;
     }
-    // Ajout : charge et affiche le carousel des autres utilisateurs
+    // Affiche le bouton HOME seulement si on consulte un autre profil
+    const homeBtn = document.getElementById('homeBtn');
+    if (homeBtn) homeBtn.style.display = 'none';
+    currentProfileId = user.id;
     loadUserCarousel(user.id);
     fetchFilms();
   } else {
@@ -494,6 +500,13 @@ async function showMainApp() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.style.display = 'none';
   }
+}
+
+function showProfileSidebar(profile) {
+  const avatarImg = document.querySelector('.avatar-img');
+  if (avatarImg) avatarImg.src = `images/avatars/${profile.avatar}`;
+  const aboutMe = document.querySelector('.about-me');
+  if (aboutMe) aboutMe.innerHTML = `<span class="profile-pseudo">${profile.pseudo}</span>`;
 }
 
 // Charge et affiche le carousel des autres utilisateurs
@@ -523,16 +536,43 @@ async function loadUserCarousel(currentUserId) {
   });
 }
 
-// Affiche les films/séries d'un autre utilisateur dans la galerie
+// Affiche les films/séries d'un autre utilisateur dans la galerie et la sidebar
 async function showUserFilms(userId) {
-  let { data, error } = await supabase
+  // Charge le profil de l'utilisateur consulté
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('pseudo, avatar, id')
+    .eq('id', userId)
+    .single();
+  if (!error && profile) {
+    showProfileSidebar(profile);
+    // Affiche le bouton HOME
+    const homeBtn = document.getElementById('homeBtn');
+    if (homeBtn) homeBtn.style.display = 'flex';
+    currentProfileId = userId;
+  }
+  // Charge ses films
+  let { data, error: filmsError } = await supabase
     .from('films')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  if (error) return alert(error.message);
+  if (filmsError) return alert(filmsError.message);
   films = data || [];
   renderGallery();
+}
+
+// Bouton HOME : revenir à son propre profil et ses films
+const homeBtn = document.getElementById('homeBtn');
+if (homeBtn) {
+  homeBtn.addEventListener('click', async () => {
+    if (myProfile) {
+      showProfileSidebar(myProfile);
+      homeBtn.style.display = 'none';
+      currentProfileId = myProfile.id;
+      fetchFilms();
+    }
+  });
 }
 
 // Ajout : écoute les changements d'état d'authentification

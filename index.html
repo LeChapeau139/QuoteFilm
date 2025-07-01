@@ -64,28 +64,31 @@
     </header>
     <div class="main-content">
       <aside class="sidebar">
-        <div class="avatar-container">
-          <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
-          <p class="about-me"></p>
-        </div>
-        <div class="add-form" id="addForm">
-          <input type="text" id="titleInput" placeholder="Titre du film ou série" />
-          <div id="autocomplete-list" class="autocomplete-list"></div>
-          <select id="typeInput">
-            <option value="movie">Film</option>
-            <option value="tv">Série</option>
-          </select>
-          <div class="rating">
-            Note :
-            <span class="star" data-value="1">☆</span>
-            <span class="star" data-value="2">☆</span>
-            <span class="star" data-value="3">☆</span>
-            <span class="star" data-value="4">☆</span>
-            <span class="star" data-value="5">☆</span>
+        <div class="sidebar-card">
+          <button id="homeBtn" class="home-btn" style="display:none;"><img id="homeBtnAvatar" src="" alt="Mon avatar" class="home-btn-avatar" /> HOME</button>
+          <div class="avatar-container">
+            <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
+            <p class="about-me"></p>
           </div>
-          <button onclick="addFilm()">Ajouter</button>
+          <div class="add-form" id="addForm">
+            <input type="text" id="titleInput" placeholder="Titre du film ou série" />
+            <div id="autocomplete-list" class="autocomplete-list"></div>
+            <select id="typeInput">
+              <option value="movie">Film</option>
+              <option value="tv">Série</option>
+            </select>
+            <div class="rating">
+              Note :
+              <span class="star" data-value="1">☆</span>
+              <span class="star" data-value="2">☆</span>
+              <span class="star" data-value="3">☆</span>
+              <span class="star" data-value="4">☆</span>
+              <span class="star" data-value="5">☆</span>
+            </div>
+            <button onclick="addFilm()">Ajouter</button>
+          </div>
+          <div id="user-carousel" class="user-carousel"></div>
         </div>
-        <div id="user-carousel" class="user-carousel"></div>
       </aside>
       <section class="content-area">
         <div class="top-films">
