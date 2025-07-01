@@ -978,3 +978,32 @@ body {
 .gallery-search button:hover {
   background: #b00610;
 }
+
+.avatar-img-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.edit-avatar-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #fff;
+  color: var(--color-accent);
+  border: 2px solid var(--color-accent);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(229,9,20,0.10);
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  z-index: 2;
+}
+.edit-avatar-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}

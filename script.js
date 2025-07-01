@@ -8,6 +8,22 @@ let myProfile = null;
 let ratingFilter = null;
 let searchQuery = '';
 
+const allAvatars = [
+  'batman.svg',
+  'c-3po.svg',
+  'dark-vador.svg',
+  'marge-simpson.svg',
+  'rick-sanchez.svg',
+  'schtroumpf.svg',
+  'scooby-doo.svg',
+  'shrek.svg',
+  'sonic.svg',
+  'spider-man.svg',
+  'stitch.svg',
+  'thor.svg',
+  'totoro.svg'
+];
+
 // === THEME SWITCHING ===
 const themeToggle = document.getElementById('themeToggle');
 const body = document.body;
@@ -285,21 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Gestion de la popup d'avatars ---
-  const allAvatars = [
-    'batman.svg',
-    'c-3po.svg',
-    'dark-vador.svg',
-    'marge-simpson.svg',
-    'rick-sanchez.svg',
-    'schtroumpf.svg',
-    'scooby-doo.svg',
-    'shrek.svg',
-    'sonic.svg',
-    'spider-man.svg',
-    'stitch.svg',
-    'thor.svg',
-    'totoro.svg'
-  ];
   const avatarMore = document.getElementById('avatar-more');
   const avatarModal = document.getElementById('avatar-modal');
   const avatarModalList = document.getElementById('avatar-modal-list');
@@ -353,6 +354,63 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     // Fermer la popup si on clique en dehors
+    avatarModal.addEventListener('click', (e) => {
+      if (e.target === avatarModal) avatarModal.style.display = 'none';
+    });
+  }
+
+  // --- Gestion du changement d'avatar depuis le profil ---
+  const editAvatarBtn = document.getElementById('edit-avatar-btn');
+  if (editAvatarBtn && avatarModal && avatarModalList) {
+    editAvatarBtn.addEventListener('click', () => {
+      // Affiche tous les avatars dans le modal
+      avatarModalList.innerHTML = allAvatars.map(file =>
+        `<img src="images/avatars/${file}" class="avatar-modal-avatar" data-avatar="${file}" tabindex="0" alt="Avatar" />`
+      ).join('');
+      avatarModal.style.display = 'flex';
+      // Sélection visuelle de l'avatar courant
+      const avatarImg = document.querySelector('.avatar-img');
+      let current = '';
+      if (avatarImg && avatarImg.src) {
+        const match = avatarImg.src.match(/avatars\/([^\/]+\.svg)/);
+        if (match) current = match[1];
+      }
+      avatarModalList.querySelectorAll('.avatar-modal-avatar').forEach(img => {
+        if (img.getAttribute('data-avatar') === current) {
+          img.classList.add('selected');
+        }
+        img.addEventListener('click', async () => {
+          // Met à jour l'avatar dans Supabase
+          if (!myProfile) return;
+          const newAvatar = img.getAttribute('data-avatar');
+          const { error } = await supabase
+            .from('profiles')
+            .update({ avatar: newAvatar })
+            .eq('id', myProfile.id);
+          if (!error) {
+            myProfile.avatar = newAvatar;
+            showProfileSidebar(myProfile);
+            // Met à jour l'avatar du bouton HOME
+            const homeBtnAvatar = document.getElementById('homeBtnAvatar');
+            if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${newAvatar}`;
+          } else {
+            alert("Erreur lors de la mise à jour de l'avatar : " + error.message);
+          }
+          avatarModal.style.display = 'none';
+        });
+        img.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            img.click();
+          }
+        });
+      });
+    });
+    // Fermer la popup
+    if (avatarModalClose) {
+      avatarModalClose.addEventListener('click', () => {
+        avatarModal.style.display = 'none';
+      });
+    }
     avatarModal.addEventListener('click', (e) => {
       if (e.target === avatarModal) avatarModal.style.display = 'none';
     });
@@ -503,6 +561,20 @@ async function logout() {
   showMainApp();
 }
 
+function updateEditAvatarBtnVisibility() {
+  const editAvatarBtn = document.getElementById('edit-avatar-btn');
+  if (
+    editAvatarBtn &&
+    typeof myProfile === 'object' && myProfile !== null &&
+    typeof currentProfileId !== 'undefined' && currentProfileId !== null &&
+    myProfile.id === currentProfileId
+  ) {
+    editAvatarBtn.style.display = 'flex';
+  } else if (editAvatarBtn) {
+    editAvatarBtn.style.display = 'none';
+  }
+}
+
 async function showMainApp() {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
@@ -518,7 +590,9 @@ async function showMainApp() {
       .single();
     if (!error && profile) {
       myProfile = profile;
+      currentProfileId = user.id;
       showProfileSidebar(profile);
+      setupEditAvatarBtn();
       // Met à jour l'avatar du bouton HOME
       const homeBtnAvatar = document.getElementById('homeBtnAvatar');
       if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${profile.avatar}`;
@@ -526,7 +600,6 @@ async function showMainApp() {
     // Affiche le bouton HOME seulement si on consulte un autre profil
     const homeBtn = document.getElementById('homeBtn');
     if (homeBtn) homeBtn.style.display = 'none';
-    currentProfileId = user.id;
     loadUserCarousel(user.id);
     fetchFilms();
   } else {
@@ -537,11 +610,75 @@ async function showMainApp() {
   }
 }
 
+function setupEditAvatarBtn() {
+  const editAvatarBtn = document.getElementById('edit-avatar-btn');
+  const editAvatarModal = document.getElementById('edit-avatar-modal');
+  const editAvatarModalList = document.getElementById('edit-avatar-modal-list');
+  const editAvatarModalClose = document.getElementById('edit-avatar-modal-close');
+  if (editAvatarBtn && editAvatarModal && editAvatarModalList) {
+    editAvatarBtn.onclick = () => {
+      console.log('Crayon cliqué');
+      // Affiche tous les avatars dans la popup dédiée
+      editAvatarModalList.innerHTML = allAvatars.map(file =>
+        `<img src=\"images/avatars/${file}\" class=\"avatar-modal-avatar\" data-avatar=\"${file}\" tabindex=\"0\" alt=\"Avatar\" />`
+      ).join('');
+      editAvatarModal.style.display = 'flex';
+      // Sélection visuelle de l'avatar courant
+      const avatarImg = document.querySelector('.avatar-img');
+      let current = '';
+      if (avatarImg && avatarImg.src) {
+        const match = avatarImg.src.match(/avatars\/([^\/]+\.svg)/);
+        if (match) current = match[1];
+      }
+      editAvatarModalList.querySelectorAll('.avatar-modal-avatar').forEach(img => {
+        if (img.getAttribute('data-avatar') === current) {
+          img.classList.add('selected');
+        }
+        img.onclick = async () => {
+          // Met à jour l'avatar dans Supabase
+          if (!myProfile) return;
+          const newAvatar = img.getAttribute('data-avatar');
+          const { error } = await supabase
+            .from('profiles')
+            .update({ avatar: newAvatar })
+            .eq('id', myProfile.id);
+          if (!error) {
+            myProfile.avatar = newAvatar;
+            showProfileSidebar(myProfile);
+            // Met à jour l'avatar du bouton HOME
+            const homeBtnAvatar = document.getElementById('homeBtnAvatar');
+            if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${newAvatar}`;
+          } else {
+            alert("Erreur lors de la mise à jour de l'avatar : " + error.message);
+          }
+          editAvatarModal.style.display = 'none';
+        };
+        img.onkeydown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            img.click();
+          }
+        };
+      });
+    };
+  }
+  // Fermer la popup (croix ou clic en dehors)
+  if (editAvatarModalClose) {
+    editAvatarModalClose.onclick = () => { editAvatarModal.style.display = 'none'; };
+  }
+  if (editAvatarModal) {
+    editAvatarModal.onclick = (e) => {
+      if (e.target === editAvatarModal) editAvatarModal.style.display = 'none';
+    };
+  }
+}
+
 function showProfileSidebar(profile) {
   const avatarImg = document.querySelector('.avatar-img');
   if (avatarImg) avatarImg.src = `images/avatars/${profile.avatar}`;
   const aboutMe = document.querySelector('.about-me');
   if (aboutMe) aboutMe.innerHTML = `<span class="profile-pseudo">${profile.pseudo}</span>`;
+  updateEditAvatarBtnVisibility();
+  setupEditAvatarBtn();
 }
 
 // Charge et affiche le carousel des autres utilisateurs
@@ -597,11 +734,11 @@ async function showUserFilms(userId) {
     .eq('id', userId)
     .single();
   if (!error && profile) {
+    currentProfileId = profile.id;
     showProfileSidebar(profile);
     // Affiche le bouton HOME
     const homeBtn = document.getElementById('homeBtn');
     if (homeBtn) homeBtn.style.display = 'flex';
-    currentProfileId = userId;
   }
   // Charge ses films
   let { data, error: filmsError } = await supabase

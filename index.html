@@ -67,7 +67,10 @@
         <div class="sidebar-card">
           <button id="homeBtn" class="home-btn" style="display:none;"><img id="homeBtnAvatar" src="" alt="Mon avatar" class="home-btn-avatar" /> HOME</button>
           <div class="avatar-container">
-            <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
+            <div class="avatar-img-wrapper">
+              <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
+              <button id="edit-avatar-btn" class="edit-avatar-btn" title="Changer d'avatar" style="display:none;">✏️</button>
+            </div>
             <p class="about-me"></p>
           </div>
           <div class="add-form" id="addForm">
@@ -118,6 +121,13 @@
         </form>
         <div class="gallery" id="gallery"></div>
       </section>
+    </div>
+  </div>
+  <div id="edit-avatar-modal" class="avatar-modal" style="display:none;">
+    <div class="avatar-modal-content">
+      <span class="avatar-modal-close" id="edit-avatar-modal-close">&times;</span>
+      <h3>Choisis ton nouvel avatar</h3>
+      <div class="avatar-modal-list" id="edit-avatar-modal-list"></div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
