@@ -7,52 +7,69 @@
   <link rel="icon" type="image/png" href="images/quotefilm-icon-white.png" />
 </head>
 <body>
-  <header class="main-header">
-    <img src="images/quotefilm-icon-white.png" alt="Logo" class="site-logo" />
-    <h1 class="site-title">Ma Cinéthèque</h1>
-    <button id="themeToggle" aria-label="Changer le thème">🌓</button>
-  </header>
-  <div class="main-content">
-    <aside class="sidebar">
-      <div class="avatar-container">
-        <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
-        <p class="about-me"><em>Regarder le plus de film et de série pour améliorer ma culture cinématographique, les films vont évoluer et moi aussi.</em></p>
-      </div>
-      <div class="add-form" id="addForm">
-        <input type="text" id="titleInput" placeholder="Titre du film ou série" />
-        <div id="autocomplete-list" class="autocomplete-list"></div>
-        <select id="typeInput">
-          <option value="movie">Film</option>
-          <option value="tv">Série</option>
-        </select>
-        <div class="rating">
-          Note :
-          <span class="star" data-value="1">☆</span>
-          <span class="star" data-value="2">☆</span>
-          <span class="star" data-value="3">☆</span>
-          <span class="star" data-value="4">☆</span>
-          <span class="star" data-value="5">☆</span>
-        </div>
-        <button onclick="addFilm()">Ajouter</button>
-      </div>
-    </aside>
-    <section class="content-area">
-      <div class="top-films">
-        <h2 class="top-title">★ ★ ★ ★ ★</h2>
-        <div class="carousel-container">
-          <button class="carousel-arrow left" onclick="scrollTopList(-1)">&#8592;</button>
-          <div class="top-list" id="topList"></div>
-          <button class="carousel-arrow right" onclick="scrollTopList(1)">&#8594;</button>
-        </div>
-      </div>
-      <div class="gallery-filters">
-        <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
-        <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
-        <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
-      </div>
-      <div class="gallery" id="gallery"></div>
-    </section>
+  <div id="login-page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
+    <h2>Connexion</h2>
+    <input type="email" id="login-email" placeholder="Email" style="margin-bottom: 1em; padding: 0.5em; width: 220px;" />
+    <input type="password" id="login-password" placeholder="Mot de passe" style="margin-bottom: 1em; padding: 0.5em; width: 220px;" />
+    <div style="display: flex; gap: 1em;">
+      <button onclick="login()" style="padding: 0.5em 1.5em;">Se connecter</button>
+      <button onclick="signup()" style="padding: 0.5em 1.5em;">Créer un compte</button>
+    </div>
+    <div id="login-error" style="color: red; margin-top: 1em;"></div>
   </div>
+  <div id="main-app" style="display: none;">
+    <header class="main-header">
+      <img src="images/quotefilm-icon-white.png" alt="Logo" class="site-logo" />
+      <h1 class="site-title">Ma Cinéthèque</h1>
+      <button id="themeToggle" aria-label="Changer le thème">🌓</button>
+      <button id="logoutBtn" onclick="logout()" style="margin-left:1em; display:none;">Déconnexion</button>
+    </header>
+    <div class="main-content">
+      <aside class="sidebar">
+        <div class="avatar-container">
+          <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
+          <p class="about-me"><em>Regarder le plus de film et de série pour améliorer ma culture cinématographique, les films vont évoluer et moi aussi.</em></p>
+        </div>
+        <div class="add-form" id="addForm">
+          <input type="text" id="titleInput" placeholder="Titre du film ou série" />
+          <div id="autocomplete-list" class="autocomplete-list"></div>
+          <select id="typeInput">
+            <option value="movie">Film</option>
+            <option value="tv">Série</option>
+          </select>
+          <div class="rating">
+            Note :
+            <span class="star" data-value="1">☆</span>
+            <span class="star" data-value="2">☆</span>
+            <span class="star" data-value="3">☆</span>
+            <span class="star" data-value="4">☆</span>
+            <span class="star" data-value="5">☆</span>
+          </div>
+          <button onclick="addFilm()">Ajouter</button>
+        </div>
+      </aside>
+      <section class="content-area">
+        <div class="top-films">
+          <h2 class="top-title">★ ★ ★ ★ ★</h2>
+          <div class="carousel-container">
+            <button class="carousel-arrow left" onclick="scrollTopList(-1)">&#8592;</button>
+            <div class="top-list" id="topList"></div>
+            <button class="carousel-arrow right" onclick="scrollTopList(1)">&#8594;</button>
+          </div>
+        </div>
+        <div class="gallery-filters">
+          <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
+          <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
+          <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient('https://mpsfftjitclsozpkqqei.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc2ZmdGppdGNsc296cGtxcWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNTE3NDcsImV4cCI6MjA2NjkyNzc0N30.gylumZxyHnZiaqLCFc_8zp0td8fl_RYoQTjlcj3Oq-o');
+  </script>
   <script src="script.js"></script>
 </body>
 </html>

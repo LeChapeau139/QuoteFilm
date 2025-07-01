@@ -56,50 +56,65 @@ function updateStars() {
   });
 }
 
-function addFilm() {
+// === SUPABASE FILMS ===
+async function fetchFilms() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  let { data, error } = await supabase
+    .from('films')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+  if (error) return alert(error.message);
+  films = data || [];
+  renderGallery();
+}
+
+async function addFilm() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return alert('Connecte-toi !');
   const title = document.getElementById("titleInput").value;
   const type = document.getElementById("typeInput").value;
-
   if (!title || currentRating === 0) return alert("Titre et note requis");
 
-  fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(title)}`)
-    .then(res => res.json())
-    .then(data => {
-      const result = data.results[0];
-      if (!result) return alert("Aucun résultat");
+  // Recherche TMDB comme avant
+  const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
+  const searchData = await searchRes.json();
+  const result = searchData.results[0];
+  if (!result) return alert("Aucun résultat");
+  const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
+  const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}`;
+  const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}`;
+  const [details, translations] = await Promise.all([
+    fetch(fullUrl).then(res2 => res2.json()),
+    fetch(translationsUrl).then(res3 => res3.json())
+  ]);
+  const genres = details.genres.map(g => g.name).join(", ");
+  let frenchTitle = result.title || result.name;
+  if (translations && translations.translations) {
+    const fr = translations.translations.find(t => t.iso_639_1 === 'fr');
+    if (fr && fr.data && fr.data.title) {
+      frenchTitle = fr.data.title;
+    }
+  }
+  const newFilm = {
+    title: frenchTitle,
+    poster,
+    type,
+    genre: genres.toLowerCase(),
+    rating: currentRating,
+    user_id: user.id
+  };
+  let { error } = await supabase.from('films').insert([newFilm]);
+  if (error) return alert(error.message);
+  currentRating = 0;
+  updateStars();
+  fetchFilms();
+}
 
-      const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
-      const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}`;
-      const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}`;
-
-      Promise.all([
-        fetch(fullUrl).then(res2 => res2.json()),
-        fetch(translationsUrl).then(res3 => res3.json())
-      ]).then(([details, translations]) => {
-        const genres = details.genres.map(g => g.name).join(", ");
-        let frenchTitle = result.title || result.name;
-        if (translations && translations.translations) {
-          const fr = translations.translations.find(t => t.iso_639_1 === 'fr');
-          if (fr && fr.data && fr.data.title) {
-            frenchTitle = fr.data.title;
-          }
-        }
-        const newFilm = {
-          id: Date.now(),
-          title: frenchTitle,
-          poster,
-          type,
-          genre: genres.toLowerCase(),
-          rating: currentRating,
-          top: currentRating === 5
-        };
-        films.push(newFilm);
-        localStorage.setItem("films", JSON.stringify(films));
-        currentRating = 0;
-        updateStars();
-        renderGallery();
-      });
-    });
+async function deleteFilm(id) {
+  await supabase.from('films').delete().eq('id', id);
+  fetchFilms();
 }
 
 function setGalleryFilter(filter, btn) {
@@ -139,12 +154,6 @@ function renderGallery() {
   });
 
   startCarouselAutoScroll();
-}
-
-function deleteFilm(id) {
-  films = films.filter(film => film.id !== id);
-  localStorage.setItem("films", JSON.stringify(films));
-  renderGallery();
 }
 
 function scrollTopList(direction) {
@@ -263,3 +272,49 @@ if (titleInput && autocompleteList) {
     });
   }
 }
+
+// === SUPABASE AUTH ===
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('login-error').textContent = error.message;
+  } else {
+    showMainApp();
+  }
+}
+
+async function signup() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    document.getElementById('login-error').textContent = error.message;
+  } else {
+    showMainApp();
+  }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  showMainApp();
+}
+
+async function showMainApp() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    fetchFilms();
+  } else {
+    document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', showMainApp);
