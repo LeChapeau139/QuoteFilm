@@ -100,14 +100,22 @@
           </div>
         </div>
         <div class="gallery-filters">
-          <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
-          <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
-          <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
-          <button class="filter-btn" data-filter="4" onclick="setRatingFilter(4, this)">4★</button>
-          <button class="filter-btn" data-filter="3" onclick="setRatingFilter(3, this)">3★</button>
-          <button class="filter-btn" data-filter="2" onclick="setRatingFilter(2, this)">2★</button>
-          <button class="filter-btn" data-filter="1" onclick="setRatingFilter(1, this)">1★</button>
+          <div class="gallery-type-filters">
+            <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
+            <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
+            <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
+          </div>
+          <div class="gallery-rating-filters">
+            <button class="filter-btn rating-btn" data-filter="4" onclick="setRatingFilter(4, this)">4★</button>
+            <button class="filter-btn rating-btn" data-filter="3" onclick="setRatingFilter(3, this)">3★</button>
+            <button class="filter-btn rating-btn" data-filter="2" onclick="setRatingFilter(2, this)">2★</button>
+            <button class="filter-btn rating-btn" data-filter="1" onclick="setRatingFilter(1, this)">1★</button>
+          </div>
         </div>
+        <form class="gallery-search" id="gallery-search" onsubmit="searchGallery(event)">
+          <input type="text" id="gallery-search-input" placeholder="Rechercher un film ou une série..." autocomplete="off" />
+          <button type="submit">🔍</button>
+        </form>
         <div class="gallery" id="gallery"></div>
       </section>
     </div>

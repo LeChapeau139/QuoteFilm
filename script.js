@@ -6,6 +6,7 @@ let carouselInterval;
 let currentProfileId = null;
 let myProfile = null;
 let ratingFilter = null;
+let searchQuery = '';
 
 // === THEME SWITCHING ===
 const themeToggle = document.getElementById('themeToggle');
@@ -116,6 +117,10 @@ async function addFilm() {
 }
 
 async function deleteFilm(id) {
+  // Empêche la suppression si on n'est pas sur son propre profil
+  if (currentProfileId && myProfile && currentProfileId !== myProfile.id) {
+    return;
+  }
   await supabase.from('films').delete().eq('id', id);
   fetchFilms();
 }
@@ -124,6 +129,7 @@ function setRatingFilter(rating, btn) {
   if (ratingFilter === rating) {
     ratingFilter = null;
     btn.classList.remove('active');
+    btn.blur();
   } else {
     ratingFilter = rating;
     document.querySelectorAll('.gallery-filters .filter-btn').forEach(b => {
@@ -140,6 +146,13 @@ function setGalleryFilter(filter, btn) {
     if (b.getAttribute('data-filter') === filter) b.classList.add('active');
     else if (['all','movie','tv'].includes(b.getAttribute('data-filter'))) b.classList.remove('active');
   });
+  renderGallery();
+}
+
+function searchGallery(e) {
+  e.preventDefault();
+  const input = document.getElementById('gallery-search-input');
+  searchQuery = input.value.trim().toLowerCase();
   renderGallery();
 }
 
@@ -161,6 +174,10 @@ function renderGallery() {
   films.forEach(film => {
     if (galleryFilter !== 'all' && film.type !== galleryFilter) return;
     if (ratingFilter && film.rating !== ratingFilter) return;
+    if (searchQuery && !(
+      (film.title && film.title.toLowerCase().includes(searchQuery)) ||
+      (film.genre && film.genre.toLowerCase().includes(searchQuery))
+    )) return;
     const item = document.createElement("div");
     item.className = "gallery-item";
     item.innerHTML = `
@@ -614,3 +631,12 @@ if (homeBtn) {
 supabase.auth.onAuthStateChange((event, session) => {
   showMainApp();
 });
+
+// Recherche en temps réel dans la galerie
+const gallerySearchInput = document.getElementById('gallery-search-input');
+if (gallerySearchInput) {
+  gallerySearchInput.addEventListener('input', function() {
+    searchQuery = this.value.trim().toLowerCase();
+    renderGallery();
+  });
+}
