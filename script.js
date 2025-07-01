@@ -5,6 +5,7 @@ let galleryFilter = 'all';
 let carouselInterval;
 let currentProfileId = null;
 let myProfile = null;
+let ratingFilter = null;
 
 // === THEME SWITCHING ===
 const themeToggle = document.getElementById('themeToggle');
@@ -119,10 +120,26 @@ async function deleteFilm(id) {
   fetchFilms();
 }
 
+function setRatingFilter(rating, btn) {
+  if (ratingFilter === rating) {
+    ratingFilter = null;
+    btn.classList.remove('active');
+  } else {
+    ratingFilter = rating;
+    document.querySelectorAll('.gallery-filters .filter-btn').forEach(b => {
+      if (b.getAttribute('data-filter') == rating) b.classList.add('active');
+      else if (!['all','movie','tv'].includes(b.getAttribute('data-filter'))) b.classList.remove('active');
+    });
+  }
+  renderGallery();
+}
+
 function setGalleryFilter(filter, btn) {
   galleryFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.gallery-filters .filter-btn').forEach(b => {
+    if (b.getAttribute('data-filter') === filter) b.classList.add('active');
+    else if (['all','movie','tv'].includes(b.getAttribute('data-filter'))) b.classList.remove('active');
+  });
   renderGallery();
 }
 
@@ -143,6 +160,7 @@ function renderGallery() {
 
   films.forEach(film => {
     if (galleryFilter !== 'all' && film.type !== galleryFilter) return;
+    if (ratingFilter && film.rating !== ratingFilter) return;
     const item = document.createElement("div");
     item.className = "gallery-item";
     item.innerHTML = `
