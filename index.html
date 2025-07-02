@@ -62,72 +62,92 @@
       <button id="themeToggle" aria-label="Changer le thème">🌓</button>
       <button id="logoutBtn" onclick="logout()" style="margin-left:1em; display:none;">Déconnexion</button>
     </header>
-    <div class="main-content">
-      <aside class="sidebar">
-        <div class="sidebar-card">
-          <button id="homeBtn" class="home-btn" style="display:none;"><img id="homeBtnAvatar" src="" alt="Mon avatar" class="home-btn-avatar" /> HOME</button>
-          <div class="avatar-container">
-            <div class="avatar-img-wrapper">
-              <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
-              <button id="edit-avatar-btn" class="edit-avatar-btn" title="Changer d'avatar" style="display:none;">✏️</button>
-            </div>
-            <p class="about-me"></p>
+    <div class="profile-bar">
+      <div class="sidebar-card">
+        <button id="homeBtn" class="home-btn" style="display:none;"><img id="homeBtnAvatar" src="" alt="Mon avatar" class="home-btn-avatar" /> HOME</button>
+        <div class="avatar-container">
+          <div class="avatar-img-wrapper">
+            <img src="images/avatar.jpg" alt="Avatar" class="avatar-img" />
+            <button id="edit-avatar-btn" class="edit-avatar-btn" title="Changer d'avatar" style="display:none;">✏️</button>
           </div>
-          <div class="add-form" id="addForm">
-            <input type="text" id="titleInput" placeholder="Titre du film ou série" />
-            <div id="autocomplete-list" class="autocomplete-list"></div>
-            <select id="typeInput">
-              <option value="movie">Film</option>
-              <option value="tv">Série</option>
-            </select>
-            <div class="rating">
-              Note :
-              <span class="star" data-value="1">☆</span>
-              <span class="star" data-value="2">☆</span>
-              <span class="star" data-value="3">☆</span>
-              <span class="star" data-value="4">☆</span>
-              <span class="star" data-value="5">☆</span>
-            </div>
-            <button onclick="addFilm()">Ajouter</button>
-          </div>
-          <div id="user-carousel" class="user-carousel"></div>
+          <p class="about-me"></p>
         </div>
-      </aside>
-      <section class="content-area">
-        <div class="top-films">
-          <h2 class="top-title">★ ★ ★ ★ ★</h2>
-          <div class="carousel-container">
-            <button class="carousel-arrow left" onclick="scrollTopList(-1)">&#8592;</button>
-            <div class="top-list" id="topList"></div>
-            <button class="carousel-arrow right" onclick="scrollTopList(1)">&#8594;</button>
+      </div>
+      <div class="sidebar-card">
+        <div class="add-form" id="addForm">
+          <input type="text" id="titleInput" placeholder="Titre du film ou série" />
+          <div id="autocomplete-list" class="autocomplete-list"></div>
+          <div class="rating">
+            Note :
+            <span class="star" data-value="1">☆</span>
+            <span class="star" data-value="2">☆</span>
+            <span class="star" data-value="3">☆</span>
+            <span class="star" data-value="4">☆</span>
+            <span class="star" data-value="5">☆</span>
           </div>
+          <button onclick="addFilm()">Ajouter</button>
         </div>
-        <div class="gallery-filters">
-          <div class="gallery-type-filters">
-            <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
-            <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
-            <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
-          </div>
-          <div class="gallery-rating-filters">
-            <button class="filter-btn rating-btn" data-filter="4" onclick="setRatingFilter(4, this)">4★</button>
-            <button class="filter-btn rating-btn" data-filter="3" onclick="setRatingFilter(3, this)">3★</button>
-            <button class="filter-btn rating-btn" data-filter="2" onclick="setRatingFilter(2, this)">2★</button>
-            <button class="filter-btn rating-btn" data-filter="1" onclick="setRatingFilter(1, this)">1★</button>
-          </div>
-        </div>
-        <form class="gallery-search" id="gallery-search" onsubmit="searchGallery(event)">
-          <input type="text" id="gallery-search-input" placeholder="Rechercher un film ou une série..." autocomplete="off" />
-          <button type="submit">🔍</button>
-        </form>
-        <div class="gallery" id="gallery"></div>
-      </section>
+      </div>
+      <div class="sidebar-card">
+        <div id="user-carousel" class="user-carousel"></div>
+      </div>
     </div>
+    <section class="content-area">
+      <div class="top-films">
+        <h2 class="top-title">★ ★ ★ ★ ★</h2>
+        <div class="carousel-container">
+          <button class="carousel-arrow left" onclick="scrollTopList(-1)">&#8592;</button>
+          <div class="top-list" id="topList"></div>
+          <button class="carousel-arrow right" onclick="scrollTopList(1)">&#8594;</button>
+        </div>
+      </div>
+      <div class="gallery-filters">
+        <div class="gallery-type-filters">
+          <button class="filter-btn active" data-filter="all" onclick="setGalleryFilter('all', this)">All</button>
+          <button class="filter-btn" data-filter="movie" onclick="setGalleryFilter('movie', this)">Film</button>
+          <button class="filter-btn" data-filter="tv" onclick="setGalleryFilter('tv', this)">Séries</button>
+        </div>
+        <div class="gallery-rating-filters">
+          <button class="filter-btn rating-btn" data-filter="4" onclick="setRatingFilter(4, this)">4★</button>
+          <button class="filter-btn rating-btn" data-filter="3" onclick="setRatingFilter(3, this)">3★</button>
+          <button class="filter-btn rating-btn" data-filter="2" onclick="setRatingFilter(2, this)">2★</button>
+          <button class="filter-btn rating-btn" data-filter="1" onclick="setRatingFilter(1, this)">1★</button>
+        </div>
+      </div>
+      <form class="gallery-search" id="gallery-search" onsubmit="searchGallery(event)">
+        <input type="text" id="gallery-search-input" placeholder="Rechercher un film ou une série..." autocomplete="off" />
+        <button type="submit">🔍</button>
+      </form>
+      <div class="gallery" id="gallery"></div>
+    </section>
   </div>
   <div id="edit-avatar-modal" class="avatar-modal" style="display:none;">
     <div class="avatar-modal-content">
       <span class="avatar-modal-close" id="edit-avatar-modal-close">&times;</span>
       <h3>Choisis ton nouvel avatar</h3>
       <div class="avatar-modal-list" id="edit-avatar-modal-list"></div>
+    </div>
+  </div>
+  <div id="edit-rating-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-modal" id="close-edit-rating-modal">&times;</span>
+      <h3>Modifier la note</h3>
+      <div class="modal-stars" id="modal-stars">
+        <span class="modal-star" data-value="1">☆</span>
+        <span class="modal-star" data-value="2">☆</span>
+        <span class="modal-star" data-value="3">☆</span>
+        <span class="modal-star" data-value="4">☆</span>
+        <span class="modal-star" data-value="5">☆</span>
+      </div>
+      <button id="validate-rating-btn">Valider</button>
+    </div>
+  </div>
+  <div id="all-users-modal" class="modal" style="display:none;">
+    <div class="modal-content" style="min-width:340px;max-width:95vw;">
+      <span class="close-modal" id="close-all-users-modal">&times;</span>
+      <h3>Tous les profils</h3>
+      <input type="text" id="user-search-input" class="user-search-input" placeholder="Rechercher un utilisateur..." style="width:100%;margin:1em 0 1.5em 0;padding:0.7em 1em;border-radius:8px;border:1px solid #ccc;" />
+      <div id="all-users-list" class="all-users-list"></div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>

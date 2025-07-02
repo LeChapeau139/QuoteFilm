@@ -7,6 +7,8 @@ let currentProfileId = null;
 let myProfile = null;
 let ratingFilter = null;
 let searchQuery = '';
+let selectedSuggestion = null;
+let allUsersCache = [];
 
 const allAvatars = [
   'batman.svg',
@@ -88,27 +90,66 @@ async function fetchFilms() {
   if (error) return alert(error.message);
   films = data || [];
   renderGallery();
+  if (myProfile && currentProfileId === myProfile.id) {
+    showProfileSidebar(myProfile);
+  }
+}
+
+function capitalizeWords(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function showToast(message) {
+  let toast = document.getElementById('toast-message');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-message';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2600);
 }
 
 async function addFilm() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return alert('Connecte-toi !');
+  if (!user) return showToast('Connecte-toi !');
   const title = document.getElementById("titleInput").value;
-  const type = document.getElementById("typeInput").value;
-  if (!title || currentRating === 0) return alert("Titre et note requis");
-
-  // Recherche TMDB comme avant
-  const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
-  const searchData = await searchRes.json();
-  const result = searchData.results[0];
-  if (!result) return alert("Aucun résultat");
-  const poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
-  const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}`;
-  const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}`;
-  const [details, translations] = await Promise.all([
-    fetch(fullUrl).then(res2 => res2.json()),
-    fetch(translationsUrl).then(res3 => res3.json())
-  ]);
+  let type;
+  if (selectedSuggestion) {
+    type = selectedSuggestion._type;
+    const id = selectedSuggestion.id;
+    const fullUrl = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=fr-FR`;
+    const translationsUrl = `https://api.themoviedb.org/3/${type}/${id}/translations?api_key=${API_KEY}&language=fr-FR`;
+    [details, translations] = await Promise.all([
+      fetch(fullUrl).then(res2 => res2.json()),
+      fetch(translationsUrl).then(res3 => res3.json())
+    ]);
+    result = details;
+    poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : "";
+  } else {
+    let searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`);
+    let searchData = await searchRes.json();
+    let result = searchData.results[0];
+    if (!result) {
+      searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`);
+      searchData = await searchRes.json();
+      result = searchData.results[0];
+      if (!result) return showToast("Aucun résultat");
+      type = 'tv';
+    } else {
+      type = 'movie';
+    }
+    poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
+    const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}&language=fr-FR`;
+    const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}&language=fr-FR`;
+    [details, translations] = await Promise.all([
+      fetch(fullUrl).then(res2 => res2.json()),
+      fetch(translationsUrl).then(res3 => res3.json())
+    ]);
+  }
   const genres = details.genres.map(g => g.name).join(", ");
   let frenchTitle = result.title || result.name;
   if (translations && translations.translations) {
@@ -117,18 +158,23 @@ async function addFilm() {
       frenchTitle = fr.data.title;
     }
   }
+  frenchTitle = capitalizeWords(frenchTitle);
+  const genreStr = genres.toLowerCase();
+  const genreCapitalized = capitalizeWords(genreStr);
+
   const newFilm = {
     title: frenchTitle,
     poster,
     type,
-    genre: genres.toLowerCase(),
+    genre: genreCapitalized,
     rating: currentRating,
     user_id: user.id
   };
   let { error } = await supabase.from('films').insert([newFilm]);
-  if (error) return alert(error.message);
+  if (error) return showToast(error.message);
   currentRating = 0;
   updateStars();
+  selectedSuggestion = null;
   fetchFilms();
 }
 
@@ -183,7 +229,7 @@ function renderGallery() {
   films.filter(film => film.rating === 5).forEach(film => {
     const topImg = document.createElement("img");
     topImg.src = film.poster;
-    topImg.alt = film.title;
+    topImg.alt = capitalizeWords(film.title);
     topList.appendChild(topImg);
   });
 
@@ -196,12 +242,17 @@ function renderGallery() {
     )) return;
     const item = document.createElement("div");
     item.className = "gallery-item";
+    let editBtnHtml = '';
+    if (currentProfileId && myProfile && currentProfileId === myProfile.id) {
+      editBtnHtml = `<button class="edit-rating-btn" data-film-id="${film.id}">Modifier sa note</button>`;
+    }
     item.innerHTML = `
       <button class="delete-film-btn" title="Supprimer" onclick="deleteFilm('${film.id}')">×</button>
-      <img src="${film.poster}" alt="${film.title}" />
-      <div><strong>${film.title}</strong></div>
-      <div>${film.genre}</div>
+      <img src="${film.poster}" alt="${capitalizeWords(film.title)}" />
+      <div><strong>${capitalizeWords(film.title)}</strong></div>
+      <div>${capitalizeWords(film.genre)}</div>
       <div class="stars">${"★".repeat(film.rating)}${"☆".repeat(5 - film.rating)}</div>
+      ${editBtnHtml}
     `;
     gallery.appendChild(item);
   });
@@ -415,6 +466,99 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === avatarModal) avatarModal.style.display = 'none';
     });
   }
+
+  // === MODAL MODIFICATION DE NOTE ===
+  let editingFilmId = null;
+  let editingRating = 0;
+
+  function openEditRatingModal(filmId, currentRating) {
+    editingFilmId = filmId;
+    editingRating = currentRating;
+    const modal = document.getElementById('edit-rating-modal');
+    modal.style.display = 'flex';
+    updateModalStars();
+  }
+
+  function closeEditRatingModal() {
+    document.getElementById('edit-rating-modal').style.display = 'none';
+    editingFilmId = null;
+    editingRating = 0;
+  }
+
+  function updateModalStars() {
+    const stars = document.querySelectorAll('.modal-star');
+    stars.forEach(star => {
+      const value = parseInt(star.getAttribute('data-value'));
+      if (value <= editingRating) {
+        star.classList.add('selected');
+        star.textContent = '★';
+      } else {
+        star.classList.remove('selected');
+        star.textContent = '☆';
+      }
+    });
+  }
+
+  // Gestion ouverture popup note
+  document.getElementById('gallery').addEventListener('click', function(e) {
+    if (e.target.classList.contains('edit-rating-btn')) {
+      const filmId = e.target.getAttribute('data-film-id');
+      const film = films.find(f => f.id == filmId);
+      if (film) {
+        openEditRatingModal(filmId, film.rating);
+      }
+    }
+  });
+
+  // Gestion fermeture popup
+  document.getElementById('close-edit-rating-modal').onclick = closeEditRatingModal;
+  document.getElementById('edit-rating-modal').onclick = function(e) {
+    if (e.target === this) closeEditRatingModal();
+  };
+
+  // Gestion sélection étoiles
+  document.querySelectorAll('.modal-star').forEach(star => {
+    star.addEventListener('mouseenter', function() {
+      const value = parseInt(this.getAttribute('data-value'));
+      updateModalStarsHover(value);
+    });
+    star.addEventListener('mouseleave', function() {
+      updateModalStars();
+    });
+    star.addEventListener('click', function() {
+      editingRating = parseInt(this.getAttribute('data-value'));
+      updateModalStars();
+    });
+  });
+
+  function updateModalStarsHover(hoverValue) {
+    document.querySelectorAll('.modal-star').forEach(star => {
+      const value = parseInt(star.getAttribute('data-value'));
+      if (value <= hoverValue) {
+        star.classList.add('selected');
+        star.textContent = '★';
+      } else {
+        star.classList.remove('selected');
+        star.textContent = '☆';
+      }
+    });
+  }
+
+  // Gestion bouton valider (mise à jour réelle de la note)
+  document.getElementById('validate-rating-btn').onclick = async function() {
+    if (!editingFilmId || !editingRating) return;
+    // Met à jour la note dans Supabase
+    const { error } = await supabase
+      .from('films')
+      .update({ rating: editingRating })
+      .eq('id', editingFilmId);
+    if (error) {
+      alert('Erreur lors de la mise à jour de la note : ' + error.message);
+    } else {
+      fetchFilms(); // Rafraîchit la liste
+      closeEditRatingModal();
+    }
+  };
 });
 
 // Also restart auto-scroll after renderGallery
@@ -434,28 +578,40 @@ let autocompleteActive = -1;
 
 if (titleInput && autocompleteList) {
   titleInput.addEventListener('input', async function() {
+    selectedSuggestion = null;
     const query = this.value.trim();
-    // Determine type from active button
-    let type = 'movie';
-    const btnMovie = document.getElementById('btn-movie');
-    if (btnMovie && !btnMovie.classList.contains('active')) type = 'tv';
     if (query.length < 2) {
       autocompleteList.style.display = 'none';
       return;
     }
-    const url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    autocompleteResults = (data.results || []).slice(0, 8);
+    // Recherche films et séries en parallèle
+    const urlMovie = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
+    const urlTV = `https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
+    const [resMovie, resTV] = await Promise.all([
+      fetch(urlMovie).then(r => r.json()),
+      fetch(urlTV).then(r => r.json())
+    ]);
+    let results = [];
+    if (resMovie.results) results = results.concat(resMovie.results.map(r => ({...r, _type: 'movie'})));
+    if (resTV.results) results = results.concat(resTV.results.map(r => ({...r, _type: 'tv'})));
+    // On trie par popularité décroissante (optionnel)
+    results = results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    autocompleteResults = results.slice(0, 20);
     if (autocompleteResults.length === 0) {
       autocompleteList.style.display = 'none';
       return;
     }
-    autocompleteList.innerHTML = autocompleteResults.map((item, i) =>
-      `<div class="autocomplete-item${i === 0 ? ' active' : ''}" data-index="${i}">${item.title || item.name}</div>`
-    ).join('');
+    autocompleteList.innerHTML = autocompleteResults.map((item, i) => {
+      const poster = item.poster_path ? `https://image.tmdb.org/t/p/w92${item.poster_path}` : 'images/quotefilm-icon.png';
+      const typeLabel = item._type === 'movie' ? '🎬 Film' : '📺 Série';
+      return `<div class="autocomplete-item" data-index="${i}">
+        <span class="autocomplete-title">${item.title || item.name}</span>
+        <span class="autocomplete-type">${typeLabel}</span>
+        <img class="autocomplete-poster" src="${poster}" alt="Affiche" />
+      </div>`;
+    }).join('');
     autocompleteList.style.display = 'block';
-    autocompleteActive = 0;
+    autocompleteActive = -1;
   });
 
   autocompleteList.addEventListener('mousedown', function(e) {
@@ -463,6 +619,7 @@ if (titleInput && autocompleteList) {
       const idx = +e.target.getAttribute('data-index');
       if (autocompleteResults[idx]) {
         titleInput.value = autocompleteResults[idx].title || autocompleteResults[idx].name;
+        selectedSuggestion = autocompleteResults[idx];
         autocompleteList.style.display = 'none';
       }
     }
@@ -481,6 +638,7 @@ if (titleInput && autocompleteList) {
     } else if (e.key === 'Enter') {
       if (autocompleteActive >= 0 && autocompleteResults[autocompleteActive]) {
         titleInput.value = autocompleteResults[autocompleteActive].title || autocompleteResults[autocompleteActive].name;
+        selectedSuggestion = autocompleteResults[autocompleteActive];
         autocompleteList.style.display = 'none';
         e.preventDefault();
       }
@@ -676,18 +834,36 @@ function showProfileSidebar(profile) {
   const avatarImg = document.querySelector('.avatar-img');
   if (avatarImg) avatarImg.src = `images/avatars/${profile.avatar}`;
   const aboutMe = document.querySelector('.about-me');
-  if (aboutMe) aboutMe.innerHTML = `<span class="profile-pseudo">${profile.pseudo}</span>`;
+  const avatarContainer = document.querySelector('.avatar-container');
+  if (aboutMe) {
+    // Compte films et séries
+    const nbFilms = films.filter(f => f.type === 'movie').length;
+    const nbSeries = films.filter(f => f.type === 'tv').length;
+    aboutMe.innerHTML = `
+      <span class="profile-pseudo">${profile.pseudo}</span>
+      <span class="profile-counts">
+        <span class="profile-count-movie">🎬 ${nbFilms} film${nbFilms > 1 ? 's' : ''}</span><br>
+        <span class="profile-count-tv">📺 ${nbSeries} série${nbSeries > 1 ? 's' : ''}</span>
+      </span>
+    `;
+  }
+  if (avatarContainer) {
+    if (myProfile && profile.id === myProfile.id) {
+      avatarContainer.classList.add('my-profile');
+    } else {
+      avatarContainer.classList.remove('my-profile');
+    }
+  }
   updateEditAvatarBtnVisibility();
   setupEditAvatarBtn();
 }
 
 // Charge et affiche le carousel des autres utilisateurs
 async function loadUserCarousel(currentUserId) {
-  // Récupère tous les profils sauf le tien
+  // Récupère tous les profils (y compris le tien)
   const { data: users, error } = await supabase
     .from('profiles')
     .select('id, pseudo, avatar')
-    .neq('id', currentUserId)
     .order('pseudo', { ascending: true });
   const carousel = document.getElementById('user-carousel');
   if (!carousel) return;
@@ -710,18 +886,81 @@ async function loadUserCarousel(currentUserId) {
       });
     }
   }
-  carousel.innerHTML = users.map(user => `
-    <div class="user-carousel-profile" data-userid="${user.id}">
-      <img src="images/avatars/${user.avatar}" class="user-carousel-avatar" alt="Avatar de ${user.pseudo}" />
+  // Trie les utilisateurs par nombre de films desc, puis pseudo
+  let sortedUsers = users.map(u => ({...u, count: filmCounts[u.id] || 0}));
+  sortedUsers = sortedUsers.sort((a, b) => b.count - a.count || a.pseudo.localeCompare(b.pseudo));
+  // Top contributeur
+  const topCount = sortedUsers.length > 0 ? sortedUsers[0].count : 0;
+  // Top 3
+  const top3 = sortedUsers.slice(0, 3);
+  // Affiche le top 3
+  carousel.innerHTML = top3.map((user, i) => `
+    <div class="user-carousel-profile${i === 0 ? ' top-contributor' : i === 1 ? ' second-contributor' : i === 2 ? ' third-contributor' : ''}" data-userid="${user.id}">
+      <span class="user-carousel-avatar-wrapper"><img src="images/avatars/${user.avatar}" class="user-carousel-avatar" alt="Avatar de ${user.pseudo}" /></span>
       <span class="user-carousel-pseudo">${user.pseudo}</span>
-      <span class="user-carousel-count">${filmCounts[user.id] || 0} film${(filmCounts[user.id]||0) > 1 ? 's' : ''}</span>
+    </div>
+  `).join('') + `
+    <div class="user-carousel-profile user-carousel-more" style="justify-content:center;font-weight:bold;color:#e50914;cursor:pointer;" tabindex="0">
+      <span>Autres utilisateurs...</span>
+    </div>`;
+  // Clic sur top 3
+  carousel.querySelectorAll('.user-carousel-profile').forEach(el => {
+    if (el.classList.contains('user-carousel-more')) {
+      el.onclick = openAllUsersModal;
+      el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') openAllUsersModal(); };
+    } else {
+      el.onclick = () => showUserFilms(el.getAttribute('data-userid'));
+    }
+  });
+  // Cache pour la popup
+  allUsersCache = sortedUsers;
+}
+
+function openAllUsersModal() {
+  const modal = document.getElementById('all-users-modal');
+  const list = document.getElementById('all-users-list');
+  const input = document.getElementById('user-search-input');
+  if (!modal || !list || !input) return;
+  renderAllUsersList('');
+  modal.style.display = 'flex';
+  input.value = '';
+  input.focus();
+  document.body.classList.add('modal-open');
+  input.oninput = function() {
+    renderAllUsersList(this.value);
+  };
+  document.getElementById('close-all-users-modal').onclick = () => {
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+  };
+  modal.onclick = function(e) {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+    }
+  };
+}
+
+function renderAllUsersList(query) {
+  const list = document.getElementById('all-users-list');
+  if (!list) return;
+  const q = (query || '').toLowerCase();
+  let filtered = allUsersCache.filter(u => u.pseudo.toLowerCase().includes(q));
+  // Trie par nombre de films desc, puis pseudo
+  filtered = filtered.sort((a, b) => b.count - a.count || a.pseudo.localeCompare(b.pseudo));
+  list.innerHTML = filtered.map((u, i) => `
+    <div class="all-users-profile${i === 0 ? ' top-contributor' : i === 1 ? ' second-contributor' : i === 2 ? ' third-contributor' : ''}" data-userid="${u.id}">
+      <img src="images/avatars/${u.avatar}" class="all-users-avatar" alt="Avatar de ${u.pseudo}" />
+      <span class="all-users-pseudo">${u.pseudo}</span>
+      <span class="all-users-count">${u.count} film${u.count > 1 ? 's' : ''}</span>
     </div>
   `).join('');
-  // Ajoute le gestionnaire de clic pour chaque profil
-  carousel.querySelectorAll('.user-carousel-profile').forEach(el => {
-    el.addEventListener('click', () => {
+  list.querySelectorAll('.all-users-profile').forEach(el => {
+    el.onclick = () => {
+      document.getElementById('all-users-modal').style.display = 'none';
+      document.body.classList.remove('modal-open');
       showUserFilms(el.getAttribute('data-userid'));
-    });
+    };
   });
 }
 
@@ -735,20 +974,23 @@ async function showUserFilms(userId) {
     .single();
   if (!error && profile) {
     currentProfileId = profile.id;
-    showProfileSidebar(profile);
+    // Charge ses films
+    let { data, error: filmsError } = await supabase
+      .from('films')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (filmsError) return alert(filmsError.message);
+    films = data || [];
+    showProfileSidebar(profile); // Affiche le profil après avoir chargé les films
+    renderGallery();
     // Affiche le bouton HOME
     const homeBtn = document.getElementById('homeBtn');
-    if (homeBtn) homeBtn.style.display = 'flex';
+    if (homeBtn) {
+      homeBtn.style.display = 'flex';
+      homeBtn.classList.add('home-btn-small');
+    }
   }
-  // Charge ses films
-  let { data, error: filmsError } = await supabase
-    .from('films')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-  if (filmsError) return alert(filmsError.message);
-  films = data || [];
-  renderGallery();
 }
 
 // Bouton HOME : revenir à son propre profil et ses films
@@ -758,6 +1000,7 @@ if (homeBtn) {
     if (myProfile) {
       showProfileSidebar(myProfile);
       homeBtn.style.display = 'none';
+      homeBtn.classList.remove('home-btn-small');
       currentProfileId = myProfile.id;
       fetchFilms();
     }
