@@ -58,9 +58,10 @@
   <div id="main-app" style="display: none;">
     <header class="main-header">
       <img src="images/quotefilm-icon-white.png" alt="Logo" class="site-logo" />
-      <h1 class="site-title">Ma Cinéthèque</h1>
-      <button id="themeToggle" aria-label="Changer le thème">🌓</button>
-      <button id="logoutBtn" onclick="logout()" style="margin-left:1em; display:none;">Déconnexion</button>
+      <h1 class="site-title" style="margin-left:0.5em;">CinéList</h1>
+      <div class="header-avatar-menu" id="header-avatar-menu" style="display:none;position:relative;">
+        <img id="header-avatar-img" src="images/avatar.jpg" alt="Mon avatar" class="header-avatar-img" style="width:40px;height:40px;border-radius:50%;cursor:pointer;object-fit:cover;" />
+      </div>
     </header>
     <div class="profile-bar">
       <div class="sidebar-card">
@@ -118,7 +119,7 @@
         <input type="text" id="gallery-search-input" placeholder="Rechercher un film ou une série..." autocomplete="off" />
         <button type="submit">🔍</button>
       </form>
-      <div class="gallery" id="gallery"></div>
+      <div class="myviews-gallery" id="gallery"></div>
     </section>
   </div>
   <div id="edit-avatar-modal" class="avatar-modal" style="display:none;">
@@ -148,6 +149,19 @@
       <h3>Tous les profils</h3>
       <input type="text" id="user-search-input" class="user-search-input" placeholder="Rechercher un utilisateur..." style="width:100%;margin:1em 0 1.5em 0;padding:0.7em 1em;border-radius:8px;border:1px solid #ccc;" />
       <div id="all-users-list" class="all-users-list"></div>
+    </div>
+  </div>
+  <!-- Popup menu utilisateur header -->
+  <div id="header-user-popup" class="header-user-popup" style="display:none;">
+    <div class="header-user-popup-content">
+      <span class="header-user-popup-close" id="header-user-popup-close">&times;</span>
+      <ul class="header-user-popup-list">
+        <li class="header-user-popup-item" data-section="decouvrir">Découvrir</li>
+        <li class="header-user-popup-item" data-section="whitelist">MaWhiteList</li>
+        <li class="header-user-popup-item" data-section="vues">Mes Vues</li>
+        <li class="header-user-popup-item" data-section="idees">Idées</li>
+        <li class="header-user-popup-item header-user-popup-logout" data-section="logout">Déconnexion</li>
+      </ul>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Découvrir - Ma Cinéthèque</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="images/quotefilm-icon-white.png" />
+</head>
+<body>
+  <header class="main-header">
+    <img src="images/quotefilm-icon-white.png" alt="Logo" class="site-logo discover-logo" style="cursor:pointer;" />
+    <h1 class="site-title" style="margin-left:0.5em;">CinéList</h1>
+    <div class="header-avatar-menu" id="header-avatar-menu" style="display:none;position:relative;">
+      <img id="header-avatar-img" src="images/avatar.jpg" alt="Mon avatar" class="header-avatar-img" style="width:40px;height:40px;border-radius:50%;cursor:pointer;object-fit:cover;" />
+    </div>
+  </header>
+  <!-- Popup menu utilisateur header -->
+  <div id="header-user-popup" class="header-user-popup" style="display:none;">
+    <div class="header-user-popup-content">
+      <span class="header-user-popup-close" id="header-user-popup-close">&times;</span>
+      <ul class="header-user-popup-list">
+        <li class="header-user-popup-item" data-section="decouvrir">Découvrir</li>
+        <li class="header-user-popup-item" data-section="whitelist">MaWhiteList</li>
+        <li class="header-user-popup-item" data-section="vues">Mes Vues</li>
+        <li class="header-user-popup-item" data-section="idees">Idées</li>
+        <li class="header-user-popup-item header-user-popup-logout" data-section="logout">Déconnexion</li>
+      </ul>
+    </div>
+  </div>
+  <main>
+    <div id="discover-filter-bar" class="discover-filter-bar"></div>
+    <div id="discover-container"></div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient('https://mpsfftjitclsozpkqqei.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc2ZmdGppdGNsc296cGtxcWVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNTE3NDcsImV4cCI6MjA2NjkyNzc0N30.gylumZxyHnZiaqLCFc_8zp0td8fl_RYoQTjlcj3Oq-o');
+  </script>
+  <script src="discover.js"></script>
+</body>
+</html> 

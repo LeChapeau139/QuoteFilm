@@ -1,4 +1,4 @@
-const API_KEY = "fd846ff36eb8355715e4264b7eb28912";
+const TMDB_API_KEY = 'fd846ff36eb8355715e4264b7eb28912';
 let films = [];
 let currentRating = 0;
 let galleryFilter = 'all';
@@ -9,6 +9,7 @@ let ratingFilter = null;
 let searchQuery = '';
 let selectedSuggestion = null;
 let allUsersCache = [];
+let ratingOverlay = null; // Overlay global pour la popup de note
 
 const allAvatars = [
   'batman.svg',
@@ -25,39 +26,6 @@ const allAvatars = [
   'thor.svg',
   'totoro.svg'
 ];
-
-// === THEME SWITCHING ===
-const themeToggle = document.getElementById('themeToggle');
-const body = document.body;
-
-function setTheme(theme) {
-  if (theme === 'dark') {
-    body.classList.add('dark-theme');
-    body.classList.remove('light-theme');
-    themeToggle.textContent = '🌙';
-  } else {
-    body.classList.remove('dark-theme');
-    body.classList.add('light-theme');
-    themeToggle.textContent = '☀️';
-  }
-  localStorage.setItem('theme', theme);
-}
-
-function getPreferredTheme() {
-  const saved = localStorage.getItem('theme');
-  if (saved) return saved;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function toggleTheme() {
-  const current = body.classList.contains('dark-theme') ? 'dark' : 'light';
-  setTheme(current === 'dark' ? 'light' : 'dark');
-}
-
-if (themeToggle) {
-  themeToggle.addEventListener('click', toggleTheme);
-  setTheme(getPreferredTheme());
-}
 
 function showAddForm() {
   document.getElementById("addForm").style.display = "flex";
@@ -83,7 +51,7 @@ async function fetchFilms() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   let { data, error } = await supabase
-    .from('films')
+    .from('film_collection')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -96,6 +64,7 @@ async function fetchFilms() {
 }
 
 function capitalizeWords(str) {
+  if (!str) return '';
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
@@ -116,61 +85,72 @@ function showToast(message) {
 async function addFilm() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return showToast('Connecte-toi !');
-  const title = document.getElementById("titleInput").value;
-  let type;
-  if (selectedSuggestion) {
-    type = selectedSuggestion._type;
-    const id = selectedSuggestion.id;
-    const fullUrl = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=fr-FR`;
-    const translationsUrl = `https://api.themoviedb.org/3/${type}/${id}/translations?api_key=${API_KEY}&language=fr-FR`;
+  if (!selectedSuggestion) return showToast('Sélectionne un film ou une série dans la liste.');
+  const type = selectedSuggestion._type;
+  const tmdbId = selectedSuggestion.id;
+  // Récupère toutes les infos détaillées depuis TMDb
+  let details, translations;
+  if (type === 'movie') {
     [details, translations] = await Promise.all([
-      fetch(fullUrl).then(res2 => res2.json()),
-      fetch(translationsUrl).then(res3 => res3.json())
+      fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=fr-FR&append_to_response=credits`).then(res => res.json()),
+      fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/translations?api_key=${TMDB_API_KEY}`).then(res => res.json())
     ]);
-    result = details;
-    poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : "";
   } else {
-    let searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`);
-    let searchData = await searchRes.json();
-    let result = searchData.results[0];
-    if (!result) {
-      searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`);
-      searchData = await searchRes.json();
-      result = searchData.results[0];
-      if (!result) return showToast("Aucun résultat");
-      type = 'tv';
-    } else {
-      type = 'movie';
-    }
-    poster = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
-    const fullUrl = `https://api.themoviedb.org/3/${type}/${result.id}?api_key=${API_KEY}&language=fr-FR`;
-    const translationsUrl = `https://api.themoviedb.org/3/${type}/${result.id}/translations?api_key=${API_KEY}&language=fr-FR`;
     [details, translations] = await Promise.all([
-      fetch(fullUrl).then(res2 => res2.json()),
-      fetch(translationsUrl).then(res3 => res3.json())
+      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${TMDB_API_KEY}&language=fr-FR&append_to_response=credits`).then(res => res.json()),
+      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/translations?api_key=${TMDB_API_KEY}`).then(res => res.json())
     ]);
   }
-  const genres = details.genres.map(g => g.name).join(", ");
-  let frenchTitle = result.title || result.name;
+  // Titre FR officiel
+  let titleFr = details.title || details.name;
   if (translations && translations.translations) {
     const fr = translations.translations.find(t => t.iso_639_1 === 'fr');
-    if (fr && fr.data && fr.data.title) {
-      frenchTitle = fr.data.title;
-    }
+    if (fr && fr.data && fr.data.title) titleFr = fr.data.title;
+    if (fr && fr.data && fr.data.name) titleFr = fr.data.name;
   }
-  frenchTitle = capitalizeWords(frenchTitle);
-  const genreStr = genres.toLowerCase();
-  const genreCapitalized = capitalizeWords(genreStr);
+  // Prépare les champs
+  const poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : '';
+  const genres = (details.genres || []).map(g => g.name).join(', ');
+  const overview = details.overview || '';
+  const runtime = details.runtime || (details.episode_run_time ? details.episode_run_time[0] : null);
+  const release_date = details.release_date || details.first_air_date || null;
+  const casting = (details.credits && details.credits.cast)
+    ? details.credits.cast.slice(0, 10).map(actor => ({
+        name: actor.name,
+        profile_path: actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
+      }))
+    : [];
+  const original_title = details.original_title || details.original_name || null;
+
+  // Vérifie si le film existe déjà pour cet utilisateur
+  const { data: existing } = await supabase
+    .from('film_collection')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('tmdb_id', tmdbId)
+    .single();
+  if (existing) {
+    showToast('Ce film/série est déjà dans ta collection !');
+    return;
+  }
 
   const newFilm = {
-    title: frenchTitle,
-    poster,
+    user_id: user.id,
+    pseudo: myProfile ? myProfile.pseudo : null,
+    tmdb_id: tmdbId,
     type,
-    genre: genreCapitalized,
+    title: titleFr,
+    original_title,
+    poster,
+    genre: genres,
+    overview,
+    casting,
+    runtime,
+    release_date,
     rating: currentRating,
-    user_id: user.id
+    created_at: new Date().toISOString()
   };
-  let { error } = await supabase.from('films').insert([newFilm]);
+  let { error } = await supabase.from('film_collection').insert([newFilm]);
   if (error) return showToast(error.message);
   currentRating = 0;
   updateStars();
@@ -183,7 +163,7 @@ async function deleteFilm(id) {
   if (currentProfileId && myProfile && currentProfileId !== myProfile.id) {
     return;
   }
-  await supabase.from('films').delete().eq('id', id);
+  await supabase.from('film_collection').delete().eq('id', id);
   fetchFilms();
 }
 
@@ -218,6 +198,120 @@ function searchGallery(e) {
   renderGallery();
 }
 
+function showMyViewDetail(film) {
+  // Crée le popup
+  const popup = document.createElement('div');
+  popup.className = 'movie-detail-popup';
+  popup.innerHTML = `
+    <div class="movie-detail-content">
+      <button class="movie-detail-close">&times;</button>
+      <div class="movie-detail-header" style="background-image: url('${film.poster}')">
+        <div class="movie-detail-header-content">
+          <h1 class="movie-detail-title">${film.title}</h1>
+          <div class="movie-detail-meta">
+            <span>${film.type === 'movie' ? '🎬 Film' : '📺 Série'}</span>
+            <span>•</span>
+            <span>${film.release_date ? new Date(film.release_date).getFullYear() : ''}</span>
+            <span>•</span>
+            <span>${film.runtime ? (film.runtime + ' min') : ''}</span>
+            <span>•</span>
+            <span>${film.genre || ''}</span>
+          </div>
+        </div>
+      </div>
+      <div class="movie-detail-actions">
+        <button class="movie-detail-btn" id="popup-edit-rating-btn">Modifier la note</button>
+      </div>
+      <div class="movie-detail-body">
+        <div class="movie-detail-user-rating" style="text-align:center;margin-bottom:1.5em;">
+          <span class="stars" style="font-size:1.7em;">${'★'.repeat(film.rating)}${'☆'.repeat(5-film.rating)}</span>
+          <span class="real-rating" style="font-size:1.2em;">${film.rating}/5</span>
+        </div>
+        <p class="movie-detail-overview">${film.overview ? film.overview : 'Aucun résumé disponible.'}</p>
+        ${film.casting && film.casting.length > 0 ? `
+          <div class="movie-detail-cast">
+            <h3>Distribution</h3>
+            <div class="cast-grid">
+              ${film.casting.map(actor => `
+                <div class="cast-item">
+                  <img class="cast-photo" src="${actor.profile_path || 'images/avatar.jpg'}" alt="${actor.name}" />
+                  <div class="cast-name">${actor.name}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  document.body.style.overflow = 'hidden';
+  // Fermeture du popup
+  const closeBtn = popup.querySelector('.movie-detail-close');
+  closeBtn.onclick = () => { popup.remove(); document.body.style.overflow = ''; if (ratingOverlay) { ratingOverlay.remove(); ratingOverlay = null; } };
+  popup.onclick = (e) => {
+    if (e.target === popup) { popup.remove(); document.body.style.overflow = ''; if (ratingOverlay) { ratingOverlay.remove(); ratingOverlay = null; } }
+  };
+  // Fermeture avec Escape
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      popup.remove();
+      document.body.style.overflow = '';
+      if (ratingOverlay) { ratingOverlay.remove(); ratingOverlay = null; }
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+  // Bouton modifier la note
+  const editBtn = popup.querySelector('#popup-edit-rating-btn');
+  if (editBtn) {
+    editBtn.onclick = () => {
+      // Ajoute un overlay pour griser la fiche
+      ratingOverlay = document.createElement('div');
+      ratingOverlay.style.position = 'fixed';
+      ratingOverlay.style.top = 0;
+      ratingOverlay.style.left = 0;
+      ratingOverlay.style.width = '100vw';
+      ratingOverlay.style.height = '100vh';
+      ratingOverlay.style.background = 'rgba(0,0,0,0.45)';
+      ratingOverlay.style.zIndex = 2001;
+      document.body.appendChild(ratingOverlay);
+      // Affiche la popup de note devant
+      openEditRatingModal(film.id, film.rating);
+      // Place la modale devant
+      const modal = document.getElementById('edit-rating-modal');
+      if (modal) {
+        modal.style.zIndex = 2002;
+      }
+    };
+  }
+}
+
+// Toast "Fait" générique
+function showToastFait() {
+  let toast = document.createElement('div');
+  toast.className = 'fait-toast';
+  toast.textContent = 'Fait ✔️';
+  toast.style.position = 'fixed';
+  toast.style.bottom = '40px';
+  toast.style.left = '50%';
+  toast.style.transform = 'translateX(-50%)';
+  toast.style.background = '#181818';
+  toast.style.color = '#fff';
+  toast.style.fontWeight = 'bold';
+  toast.style.fontSize = '1.2em';
+  toast.style.padding = '0.8em 2em';
+  toast.style.borderRadius = '999px';
+  toast.style.boxShadow = '0 2px 16px rgba(0,0,0,0.18)';
+  toast.style.zIndex = 3000;
+  toast.style.opacity = 0;
+  toast.style.transition = 'opacity 0.4s, bottom 0.4s';
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = 1; toast.style.bottom = '60px'; }, 10);
+  setTimeout(() => { toast.style.opacity = 0; toast.style.bottom = '40px'; }, 2500);
+  setTimeout(() => { if (toast) toast.remove(); }, 3000);
+}
+
 function renderGallery() {
   const gallery = document.getElementById("gallery");
   const topList = document.getElementById("topList");
@@ -241,19 +335,21 @@ function renderGallery() {
       (film.genre && film.genre.toLowerCase().includes(searchQuery))
     )) return;
     const item = document.createElement("div");
-    item.className = "gallery-item";
-    let editBtnHtml = '';
-    if (currentProfileId && myProfile && currentProfileId === myProfile.id) {
-      editBtnHtml = `<button class="edit-rating-btn" data-film-id="${film.id}">Modifier sa note</button>`;
-    }
+    item.className = "myviews-card";
     item.innerHTML = `
       <button class="delete-film-btn" title="Supprimer" onclick="deleteFilm('${film.id}')">×</button>
       <img src="${film.poster}" alt="${capitalizeWords(film.title)}" />
       <div><strong>${capitalizeWords(film.title)}</strong></div>
       <div>${capitalizeWords(film.genre)}</div>
       <div class="stars">${"★".repeat(film.rating)}${"☆".repeat(5 - film.rating)}</div>
-      ${editBtnHtml}
     `;
+    // Ajout du gestionnaire de clic pour ouvrir la popup détail (hors clic sur les boutons)
+    item.addEventListener('click', function(e) {
+      if (
+        e.target.classList.contains('delete-film-btn')
+      ) return;
+      showMyViewDetail(film);
+    });
     gallery.appendChild(item);
   });
 
@@ -499,25 +595,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Gestion ouverture popup note
-  document.getElementById('gallery').addEventListener('click', function(e) {
-    if (e.target.classList.contains('edit-rating-btn')) {
-      const filmId = e.target.getAttribute('data-film-id');
-      const film = films.find(f => f.id == filmId);
-      if (film) {
-        openEditRatingModal(filmId, film.rating);
-      }
-    }
-  });
-
-  // Gestion fermeture popup
-  document.getElementById('close-edit-rating-modal').onclick = closeEditRatingModal;
-  document.getElementById('edit-rating-modal').onclick = function(e) {
-    if (e.target === this) closeEditRatingModal();
-  };
-
   // Gestion sélection étoiles
-  document.querySelectorAll('.modal-star').forEach(star => {
+  const modalStars = document.querySelectorAll('.modal-star');
+  modalStars.forEach(star => {
     star.addEventListener('mouseenter', function() {
       const value = parseInt(this.getAttribute('data-value'));
       updateModalStarsHover(value);
@@ -544,12 +624,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Gestion ouverture popup note
+  document.getElementById('gallery').addEventListener('click', function(e) {
+    if (e.target.classList.contains('edit-rating-btn')) {
+      const filmId = e.target.getAttribute('data-film-id');
+      const film = films.find(f => f.id == filmId);
+      if (film) {
+        openEditRatingModal(filmId, film.rating);
+      }
+    }
+  });
+
   // Gestion bouton valider (mise à jour réelle de la note)
   document.getElementById('validate-rating-btn').onclick = async function() {
     if (!editingFilmId || !editingRating) return;
     // Met à jour la note dans Supabase
     const { error } = await supabase
-      .from('films')
+      .from('film_collection')
       .update({ rating: editingRating })
       .eq('id', editingFilmId);
     if (error) {
@@ -557,8 +648,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       fetchFilms(); // Rafraîchit la liste
       closeEditRatingModal();
+      if (ratingOverlay) { ratingOverlay.remove(); ratingOverlay = null; }
+      showToastFait();
     }
   };
+
+  window.openEditRatingModal = openEditRatingModal;
 });
 
 // Also restart auto-scroll after renderGallery
@@ -578,15 +673,15 @@ let autocompleteActive = -1;
 
 if (titleInput && autocompleteList) {
   titleInput.addEventListener('input', async function() {
-    selectedSuggestion = null;
+    autocompleteResults = [];
     const query = this.value.trim();
     if (query.length < 2) {
       autocompleteList.style.display = 'none';
       return;
     }
-    // Recherche films et séries en parallèle
-    const urlMovie = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
-    const urlTV = `https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
+    // Recherche films et séries en parallèle sur TMDb
+    const urlMovie = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
+    const urlTV = `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`;
     const [resMovie, resTV] = await Promise.all([
       fetch(urlMovie).then(r => r.json()),
       fetch(urlTV).then(r => r.json())
@@ -594,7 +689,7 @@ if (titleInput && autocompleteList) {
     let results = [];
     if (resMovie.results) results = results.concat(resMovie.results.map(r => ({...r, _type: 'movie'})));
     if (resTV.results) results = results.concat(resTV.results.map(r => ({...r, _type: 'tv'})));
-    // On trie par popularité décroissante (optionnel)
+    // Trie par popularité décroissante
     results = results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     autocompleteResults = results.slice(0, 20);
     if (autocompleteResults.length === 0) {
@@ -615,8 +710,9 @@ if (titleInput && autocompleteList) {
   });
 
   autocompleteList.addEventListener('mousedown', function(e) {
-    if (e.target.classList.contains('autocomplete-item')) {
-      const idx = +e.target.getAttribute('data-index');
+    const item = e.target.closest('.autocomplete-item');
+    if (item) {
+      const idx = +item.getAttribute('data-index');
       if (autocompleteResults[idx]) {
         titleInput.value = autocompleteResults[idx].title || autocompleteResults[idx].name;
         selectedSuggestion = autocompleteResults[idx];
@@ -689,10 +785,14 @@ async function signup() {
   const email = document.getElementById('signup-email').value;
   const password = document.getElementById('signup-password').value;
   const pseudo = document.getElementById('signup-pseudo').value;
-  const avatar = document.getElementById('selected-avatar').value;
+  let avatar = document.getElementById('selected-avatar').value;
   if (!pseudo) {
     document.getElementById('signup-error').textContent = "Le pseudo est requis.";
     return;
+  }
+  // Sécurise l'avatar par défaut
+  if (!avatar || typeof avatar !== 'string' || !/\.(svg|jpg|jpeg|png|gif)$/i.test(avatar)) {
+    avatar = 'avatar.jpg';
   }
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) {
@@ -733,13 +833,61 @@ function updateEditAvatarBtnVisibility() {
   }
 }
 
+// === HEADER AVATAR POPUP ===
+function setupHeaderAvatarMenu(profile) {
+  const headerAvatarMenu = document.getElementById('header-avatar-menu');
+  const headerAvatarImg = document.getElementById('header-avatar-img');
+  const headerUserPopup = document.getElementById('header-user-popup');
+  const headerUserPopupClose = document.getElementById('header-user-popup-close');
+  if (!headerAvatarMenu || !headerAvatarImg || !headerUserPopup || !headerUserPopupClose) return;
+  // Affiche le menu
+  headerAvatarMenu.style.display = 'flex';
+  // Met à jour l'avatar
+  headerAvatarImg.src = `images/avatars/${profile.avatar}`;
+  // Ouvre la popup au clic sur l'avatar
+  headerAvatarImg.onclick = (e) => {
+    headerUserPopup.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  };
+  // Accessibilité clavier
+  headerAvatarImg.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      headerAvatarImg.click();
+    }
+  };
+  // Ferme la popup
+  function closePopup() {
+    headerUserPopup.style.display = 'none';
+    document.body.classList.remove('modal-open');
+  }
+  headerUserPopupClose.onclick = closePopup;
+  headerUserPopup.onclick = (e) => {
+    if (e.target === headerUserPopup) closePopup();
+  };
+  // Actions du menu
+  headerUserPopup.querySelectorAll('.header-user-popup-item').forEach(item => {
+    item.onclick = async () => {
+      const section = item.getAttribute('data-section');
+      if (section === 'logout') {
+        await logout();
+        closePopup();
+      } else if (section === 'decouvrir') {
+        window.location.href = 'discover.html';
+      } else if (section === 'vues') {
+        window.location.href = 'index.html';
+      } else {
+        alert('Section : ' + section);
+        closePopup();
+      }
+    };
+  });
+}
+
 async function showMainApp() {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.style.display = 'inline-block';
     // Charge le profil utilisateur connecté et affiche l'avatar et le pseudo
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -751,9 +899,18 @@ async function showMainApp() {
       currentProfileId = user.id;
       showProfileSidebar(profile);
       setupEditAvatarBtn();
-      // Met à jour l'avatar du bouton HOME
-      const homeBtnAvatar = document.getElementById('homeBtnAvatar');
-      if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${profile.avatar}`;
+      // Sécurise l'affichage de l'avatar
+      if (profile.avatar && /\.(svg|jpg|jpeg|png|gif)$/i.test(profile.avatar)) {
+        setupHeaderAvatarMenu(profile);
+        const homeBtnAvatar = document.getElementById('homeBtnAvatar');
+        if (homeBtnAvatar) homeBtnAvatar.src = `images/avatars/${profile.avatar}`;
+      } else {
+        // Avatar absent ou incorrect, on met un avatar par défaut
+        profile.avatar = 'avatar.jpg';
+        setupHeaderAvatarMenu(profile);
+        const homeBtnAvatar = document.getElementById('homeBtnAvatar');
+        if (homeBtnAvatar) homeBtnAvatar.src = `images/avatar.jpg`;
+      }
     }
     // Affiche le bouton HOME seulement si on consulte un autre profil
     const homeBtn = document.getElementById('homeBtn');
@@ -763,8 +920,9 @@ async function showMainApp() {
   } else {
     document.getElementById('login-page').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.style.display = 'none';
+    // Cache le menu avatar header
+    const headerAvatarMenu = document.getElementById('header-avatar-menu');
+    if (headerAvatarMenu) headerAvatarMenu.style.display = 'none';
   }
 }
 
@@ -876,7 +1034,7 @@ async function loadUserCarousel(currentUserId) {
   let filmCounts = {};
   if (userIds.length > 0) {
     const { data: filmsData } = await supabase
-      .from('films')
+      .from('film_collection')
       .select('user_id');
     if (filmsData) {
       filmsData.forEach(row => {
@@ -976,7 +1134,7 @@ async function showUserFilms(userId) {
     currentProfileId = profile.id;
     // Charge ses films
     let { data, error: filmsError } = await supabase
-      .from('films')
+      .from('film_collection')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -1020,3 +1178,10 @@ if (gallerySearchInput) {
     renderGallery();
   });
 }
+
+window.addEventListener('unhandledrejection', function(event) {
+  if (event.reason && event.reason.status === 406) {
+    // Ignore l'erreur 406 Supabase
+    event.preventDefault();
+  }
+});
